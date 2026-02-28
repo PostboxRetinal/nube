@@ -9,13 +9,13 @@ services:
     depends_on:
       consul:
         condition: service_healthy
+      frontend:
+        condition: service_healthy
       users:
         condition: service_healthy
       products:
         condition: service_healthy
-      frontend:
-        condition: service_healthy
-      ftp:
+      orders:
         condition: service_healthy
 
     environment:
@@ -26,28 +26,28 @@ services:
       echo "Registering services in Consul..." ;
 
       SERVICES="
-      ftp:21
       frontend:5001
       users:5002
       products:5003
+      orders:5004
       " ;
 
-      for SERVICE in $SERVICES; do
-        NAME=$(echo $SERVICE | cut -d":" -f1) ;
-        PORT=$(echo $SERVICE | cut -d":" -f2) ;
+      for SERVICE in $$SERVICES; do
+        NAME=$$(echo $$SERVICE | cut -d":" -f1) ;
+        PORT=$$(echo $$SERVICE | cut -d":" -f2) ;
 
-        echo "Registering $NAME on port $PORT..." ;
+        echo "Registering $$NAME on port $$PORT..." ;
 
         curl -s -X PUT \
           -H "Content-Type: application/json" \
-          -H "X-Consul-Token: ${CONSUL_HTTP_TOKEN}" \
+          -H "X-Consul-Token: ${CONSUL_HTTP_TOKEN:-}" \
           -d "{
-            \"ID\": \"${NAME}-service-1\",
-            \"Name\": \"${NAME}\",
-            \"Address\": \"${NAME}\",
-            \"Port\": ${PORT},
+            \"ID\": \"$${NAME}-service-1\",
+            \"Name\": \"$${NAME}\",
+            \"Address\": \"$${NAME}\",
+            \"Port\": $${PORT},
             \"Check\": {
-              \"TCP\": \"${NAME}:${PORT}\",
+              \"TCP\": \"$${NAME}:$${PORT}\",
               \"Interval\": \"15s\",
               \"Timeout\": \"5s\"
             }
@@ -72,9 +72,6 @@ services:
       - "${CONSUL_HTTP_PORT:-8500}:8500"
       - "${CONSUL_DNS_PORT:-8600}:8600/tcp"
       - "${CONSUL_DNS_PORT:-8600}:8600/udp"
-
-    volumes:
-      - consul_data:/consul/data
 
     environment:
       - CONSUL_BIND_INTERFACE=eth0
@@ -116,39 +113,26 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  ftp:
-    image: fauria/vsftpd
-    container_name: ftp
+  frontend:
+    build: /home/vagrant/webApp/frontend
     ports:
-      - "21:21"
-      - "21100-21110:21100-21110"
-    environment:
-      FTP_USER: ${FTP_USER:-usuarioftp}
-      FTP_PASS: ${FTP_PASS:-12345}
-      PASV_ADDRESS: ${PASV_ADDRESS:-192.168.100.3}
-      PASV_MIN_PORT: ${FTP_PASV_MIN:-21100}
-      PASV_MAX_PORT: ${FTP_PASV_MAX:-21110}
-
-      ANONYMOUS_ENABLE: "NO"
-      CHROOT_LOCAL_USER: "YES"
-
-    volumes:
-      - /home/vagrant/dockerPractice/ftp:/home/vsftpd/usuarioftp/
+      - "5001:5001"
+    depends_on:
+      - users
+      - products
+      - orders
 
     networks:
       - mynetwork
 
     healthcheck:
-      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/21' || exit 1"]
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/5001' || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 4
       start_period: 15s
-
-    restart: always
-
   users:
-    build: /home/vagrant/dockerPractice/microUsers
+    build: /home/vagrant/webApp/microUsers
     ports:
       - "5002:5002"
     depends_on:
@@ -165,7 +149,7 @@ services:
       start_period: 15s
 
   products:
-    build: /home/vagrant/dockerPractice/microProducts
+    build: /home/vagrant/webApp/microProducts
     ports:
       - "5003:5003"
     depends_on:
@@ -181,19 +165,18 @@ services:
       retries: 4
       start_period: 15s
 
-  frontend:
-    build: /home/vagrant/dockerPractice/frontend
+  orders:
+    build: /home/vagrant/webApp/microOrders
     ports:
-      - "5001:5001"
+      - "5004:5004"
     depends_on:
-      - users
-      - products
+      - db
 
     networks:
       - mynetwork
 
     healthcheck:
-      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/5001' || exit 1"]
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/5004' || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 4
@@ -209,18 +192,11 @@ services:
     volumes:
       - db_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-      
+
     networks:
       - mynetwork
 volumes:
   db_data:
-
-  consul_data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./data/consul
 
 networks:
   mynetwork:
