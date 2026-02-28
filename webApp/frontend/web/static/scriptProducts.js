@@ -1,4 +1,5 @@
 const PRODUCT_BASE_URL = `http://${window.location.hostname}:${PORT_PRODUCTS}/api/products`;
+const ORDER_BASE_URL = `http://${window.location.hostname}:${PORT_ORDERS}/api/orders`;
 
 function getProducts() {
     fetch(PRODUCT_BASE_URL)
@@ -26,6 +27,22 @@ function getProducts() {
                 stockCell.textContent = product.stock;
                 row.appendChild(stockCell);
 
+                var qtyCell = document.createElement('td');
+                var qtyInput = document.createElement('input');
+                qtyInput.type = 'number';
+                qtyInput.min = '0';
+                qtyInput.max = product.stock;
+                qtyInput.value = '0';
+                qtyInput.className = 'form-control order-qty-input';
+                qtyInput.dataset.productId = product.id;
+                
+                if (product.stock === 0) {
+                    qtyInput.disabled = true; 
+                }
+                
+                qtyCell.appendChild(qtyInput);
+                row.appendChild(qtyCell);
+
                 var actionsCell = document.createElement('td');
 
                 var editLink = document.createElement('a');
@@ -38,7 +55,8 @@ function getProducts() {
                 deleteLink.href = '#';
                 deleteLink.textContent = 'Delete';
                 deleteLink.className = 'btn btn-danger';
-                deleteLink.addEventListener('click', function() {
+                deleteLink.addEventListener('click', function(e) {
+                    e.preventDefault(); 
                     deleteProduct(product.id);
                 });
                 actionsCell.appendChild(deleteLink);
@@ -73,6 +91,7 @@ function createProduct() {
     })
     .then(data => {
         console.log(data);
+        getProducts(); 
     })
     .catch(error => {
         console.error('Error:', error);
@@ -137,4 +156,54 @@ function deleteProduct(productId) {
             console.error('Error:', error);
         });
     }
+}
+
+function createOrderFromProducts() {
+    const qtyInputs = document.querySelectorAll('.order-qty-input');
+    const productsToOrder = [];
+
+    qtyInputs.forEach(input => {
+        const qty = parseInt(input.value, 10);
+        if (qty > 0) {
+            productsToOrder.push({
+                id: parseInt(input.dataset.productId, 10),
+                quantity: qty
+            });
+        }
+    });
+
+    if (productsToOrder.length === 0) {
+        alert("Please select at least one product with a quantity greater than 0.");
+        return;
+    }
+
+    const payload = {
+        products: productsToOrder
+    };
+
+    fetch(ORDER_BASE_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+    })
+    .then(response => {
+        return response.json().then(data => {
+            if (!response.ok) {
+                throw new Error(data.message || 'Error creating order');
+            }
+            return data;
+        });
+    })
+    .then(data => {
+        alert('Order created successfully!');
+        getProducts(); 
+        
+        document.querySelectorAll('.order-qty-input').forEach(input => input.value = 0);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error: ' + error.message);
+    });
 }

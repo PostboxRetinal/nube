@@ -170,6 +170,7 @@ services:
     environment:
       - PORT_ORDERS=${PORT_ORDERS:-5004}
       - PORT_FRONTEND=${PORT_FRONTEND:-5001}
+      - PORT_CONSUL=${PORT_CONSUL:-8500}
     ports:
       - "${PORT_ORDERS:-5004}:5004"
     depends_on:

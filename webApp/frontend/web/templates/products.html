@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,69 +11,76 @@
             padding-top: 50px;
             padding-bottom: 20px;
         }
+
         .navbar {
             margin-bottom: 20px;
         }
+
         .form-container {
             max-width: 600px;
             margin: 0 auto;
         }
     </style>
 </head>
+
 <body>
 
-<nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
-    <a class="navbar-brand" href="/">Store Management</a>
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-</nav>
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
+        <a class="navbar-brand" href="/">Store Management</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse"
+            aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </nav>
 
-<div class="container">
-    <div class="form-container">
-        <h2>Add New Product</h2>
-        <form id="add-product-form">
-            <div class="form-group">
-                <label for="name">Name</label>
-                <input type="text" class="form-control" id="name" required>
-            </div>
-            <div class="form-group">
-                <label for="description">Description</label>
-                <textarea class="form-control" id="description" rows="3"></textarea>
-            </div>
-            <div class="form-group">
-                <label for="price">Price</label>
-                <input type="number" class="form-control" id="price" step="0.01" required>
-            </div>
-            <div class="form-group">
-                <label for="stock">Stock</label>
-                <input type="number" class="form-control" id="stock" required>
-            </div>
-            <button type="button" class="btn btn-primary" onclick="createProduct()">Create Product</button>
-        </form>
-    </div>
+    <div class="container">
+        <div class="form-container">
+            <h2>Add New Product</h2>
+            <form id="add-product-form">
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <input type="text" class="form-control" id="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea class="form-control" id="description" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="price">Price</label>
+                    <input type="number" class="form-control" id="price" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="stock">Stock</label>
+                    <input type="number" class="form-control" id="stock" required>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="createProduct()">Create Product</button>
+            </form>
+        </div>
 
-    <h2 class="mt-4">Products List</h2>
-    <table id="product-list" class="table table-striped">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Price</th>
-                <th>Stock</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-    <button type="button" class="btn btn-secondary" onclick="getProducts()">Get Products</button>
-</div>
+        <h2 class="mt-4">Products List</h2>
+        <table id="product-list" class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Price</th>
+                    <th>Stock</th>
+                    <th>Order Qty</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <button type="button" class="btn btn-primary" onclick="getProducts()">Get Products</button>
+        <button type="button" class="btn btn-success" onclick="createOrderFromProducts()">Create Order with
+            Selected</button>
 
-<script>
-  const PORT_USERS = "{{ PORT_USERS }}";
-  const PORT_PRODUCTS = "{{ PORT_PRODUCTS }}";
-  const PORT_ORDERS = "{{ PORT_ORDERS }}";
-</script>
-<script src="static/scriptProducts.js"></script>
+        <script>
+            const PORT_USERS = "{{ PORT_USERS }}";
+            const PORT_PRODUCTS = "{{ PORT_PRODUCTS }}";
+            const PORT_ORDERS = "{{ PORT_ORDERS }}";
+        </script>
+        <script src="static/scriptProducts.js"></script>
 </body>
+
 </html>

@@ -10,7 +10,7 @@ order_controller = Blueprint('order_controller', __name__)
 def get_products_service_url():
     PORT_CONSUL = os.environ["PORT_CONSUL"]
     try:
-        response = requests.get('http://consul:{PORT_CONSUL}/v1/catalog/service/products')
+        response = requests.get(f'http://consul:{PORT_CONSUL}/v1/catalog/service/products')
         if response.status_code == 200:
             services = response.json()
             if services:
@@ -19,26 +19,57 @@ def get_products_service_url():
                 port = service.get('ServicePort')
                 return f"http://{address}:{port}"
     except Exception as e:
-        print(f"Error consultando a Consul: {e}")
+        print(f"Error consultando a Consul para products: {e}")
+    return None
+
+def get_users_service_url():
+    PORT_CONSUL = os.environ["PORT_CONSUL"]
+    try:
+        response = requests.get(f'http://consul:{PORT_CONSUL}/v1/catalog/service/users')
+        if response.status_code == 200:
+            services = response.json()
+            if services:
+                service = services[0]
+                address = service.get('ServiceAddress') or service.get('Address')
+                port = service.get('ServicePort')
+                return f"http://{address}:{port}"
+    except Exception as e:
+        print(f"Error consultando a Consul para users: {e}")
     return None
 
 @order_controller.route('/api/orders', methods=['GET'])
 def get_orders():
     orders = Orders.query.all()
-    result = [{
-        'id': o.id,
-        'user_id': o.user_id,
-        'product_id': o.product_id,
-        'quantity': o.quantity,
-        'total': float(o.total)
-    } for o in orders]
+    users_url = get_users_service_url()
+    
+    result = []
+    for o in orders:
+        user_name = f"ID: {o.user_id}" 
+        
+        if users_url:
+            try:
+                # Le preguntamos al microservicio de usuarios por este ID
+                user_resp = requests.get(f"{users_url}/api/users/{o.user_id}", timeout=3)
+                if user_resp.status_code == 200:
+                    user_data = user_resp.json()
+                    # Extraemos el nombre y lo reemplazamos
+                    user_name = user_data.get('name', user_name)
+            except requests.exceptions.RequestException as e:
+                print(f"Error conectando con Users para el ID {o.user_id}: {e}")
+
+        result.append({
+            'id': o.id,
+            'user_id': user_name,
+            'product_id': o.product_id,
+            'quantity': o.quantity,
+            'total': float(o.total)
+        })
+        
     return jsonify(result)
 
 @order_controller.route('/api/orders', methods=['POST'])
 def create_order():
-    # En un entorno real, usarías session.get('username'). 
-    # Para facilitar las pruebas sin login forzado, usamos un valor por defecto.
-    user_name = session.get('username', 'Invitado') 
+    user_id_actual = session.get('user_id', 1) 
     
     data = request.get_json()
     products = data.get('products')
@@ -83,13 +114,11 @@ def create_order():
             new_stock = prod['current_stock'] - prod['qty']
             subtotal = prod['price'] * prod['qty']
             
-            # Descontar inventario a través de la API descubierta por Consul
             update_resp = requests.put(f"{products_url}/api/products/{prod['id']}", json={'stock': new_stock}, timeout=5)
             if update_resp.status_code not in [200, 204]:
                 return jsonify({'message': 'Error al actualizar el inventario'}), 500
             
-            # Guardar la orden
-            new_order = Orders(user_id=user_name, product_id=prod['id'], quantity=prod['qty'], total=subtotal)
+            new_order = Orders(user_id=user_id_actual, product_id=prod['id'], quantity=prod['qty'], total=subtotal)
             db.session.add(new_order)
             
         db.session.commit()
@@ -97,7 +126,8 @@ def create_order():
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': 'Error interno al guardar la orden'}), 500
+        print(f"ERROR FATAL AL GUARDAR: {str(e)}", flush=True) 
+        return jsonify({'message': f'Error interno al guardar la orden: {str(e)}'}), 500
 
 @order_controller.route('/api/orders/<int:order_id>', methods=['DELETE'])
 def delete_order(order_id):
