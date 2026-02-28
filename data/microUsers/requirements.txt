@@ -1,0 +1,7 @@
+flask
+flask-cors
+flask_sqlalchemy
+cryptography
+pymysql
+flask-consulate
+six
