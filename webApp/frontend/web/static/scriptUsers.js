@@ -1,5 +1,4 @@
-const USER_API_PORT = 5002;
-const USER_BASE_URL = `http://${window.location.hostname}:${USER_API_PORT}/api/users`;
+const USER_BASE_URL = `http://${window.location.hostname}:${PORT_USERS}/api/users`;
 
 function getUsers() {
     fetch(USER_BASE_URL)

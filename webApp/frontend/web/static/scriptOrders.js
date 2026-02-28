@@ -1,6 +1,4 @@
-// Atrapamos la IP dinámicamente
-const ORDER_API_PORT = 5004; // Cambia esto si tu puerto de órdenes es distinto (ej. 5001)
-const ORDER_BASE_URL = `http://${window.location.hostname}:${ORDER_API_PORT}/api/orders`;
+const ORDER_BASE_URL = `http://${window.location.hostname}:${PORT_ORDERS}/api/orders`;
 
 function getOrders() {
     fetch(ORDER_BASE_URL)

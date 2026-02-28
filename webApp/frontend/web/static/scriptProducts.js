@@ -1,5 +1,4 @@
-const PRODUCT_API_PORT = 5003;
-const PRODUCT_BASE_URL = `http://${window.location.hostname}:${PRODUCT_API_PORT}/api/products`;
+const PRODUCT_BASE_URL = `http://${window.location.hostname}:${PORT_PRODUCTS}/api/products`;
 
 function getProducts() {
     fetch(PRODUCT_BASE_URL)

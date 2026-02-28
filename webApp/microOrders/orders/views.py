@@ -2,12 +2,13 @@ from flask import Flask
 from orders.controllers.order_controller import order_controller
 from db.db import db
 from flask_cors import CORS
+import os
 
 app = Flask(__name__)
 
 CORS(app, resources={
     r"/api/*": {
-        "origins": "http://frontend:5001",
+        "origins": f"http://192.168.80.3:{os.environ['PORT_FRONTEND']}",
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type"]
     }

@@ -4,7 +4,7 @@ services:
     container_name: services_registrar
     restart: "no"
     networks:
-      - mynetwork
+      - parcialNetwork
 
     depends_on:
       consul:
@@ -67,19 +67,19 @@ services:
     command: >-
       sh -c "consul agent -server -bootstrap-expect=1 -node=consul-server-1 -bind=0.0.0.0 -client=0.0.0.0 -ui -data-dir=/consul/data -config-dir=/consul/config -log-level=INFO"
     ports:
-      - "${CONSUL_HTTP_PORT:-8500}:8500"
-      - "${CONSUL_DNS_PORT:-8600}:8600/tcp"
-      - "${CONSUL_DNS_PORT:-8600}:8600/udp"
+      - "${PORT_CONSUL:-8500}:8500"
+      - "${PORT_DNS_CONSUL:-8600}:8600/tcp"
+      - "${PORT_DNS_CONSUL:-8600}:8600/udp"
     environment:
       - CONSUL_BIND_INTERFACE=eth0
       - CONSUL_HTTP_TOKEN=${CONSUL_HTTP_TOKEN:-}
     networks:
-      - mynetwork
+      - parcialNetwork
     healthcheck:
       test: ["CMD", "consul", "members"]
       interval: 15s
-      timeout: 10s
-      retries: 4
+      timeout: 5s
+      retries: 3
       start_period: 15s
     deploy:
       resources:
@@ -106,67 +106,81 @@ services:
   frontend:
     build: /home/vagrant/webApp/frontend
     container_name: webapp-frontend
+    environment:
+      - PORT_FRONTEND=${PORT_FRONTEND:-5001}
+      - PORT_USERS=${PORT_USERS:-5002}
+      - PORT_PRODUCTS=${PORT_PRODUCTS:-5003}
+      - PORT_ORDERS=${PORT_ORDERS:-5004}
     ports:
-      - "5001:5001"
+      - "${PORT_FRONTEND:-5001}:5001"
     depends_on:
       - users
       - products
       - orders
     networks:
-      - mynetwork
+      - parcialNetwork
     healthcheck:
       test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/5001' || exit 1"]
       interval: 15s
       timeout: 5s
-      retries: 4
+      retries: 3
       start_period: 15s
 
   users:
     build: /home/vagrant/webApp/microUsers
     container_name: webapp-users
+    environment:
+      - PORT_USERS=${PORT_USERS:-5002}
+      - PORT_FRONTEND=${PORT_FRONTEND:-5001}
     ports:
-      - "5002:5002"
+      - "${PORT_USERS:-5002}:5002"
     depends_on:
       - users_db
     networks:
-      - mynetwork
+      - parcialNetwork
     healthcheck:
       test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/5002' || exit 1"]
       interval: 15s
       timeout: 5s
-      retries: 4
+      retries: 3
       start_period: 15s
 
   products:
     build: /home/vagrant/webApp/microProducts
     container_name: webapp-products
+    environment:
+      - PORT_PRODUCTS=${PORT_PRODUCTS:-5003}
+      - PORT_FRONTEND=${PORT_FRONTEND:-5001}
     ports:
-      - "5003:5003"
+      - "${PORT_PRODUCTS:-5003}:5003"
     depends_on:
       - products_db
     networks:
-      - mynetwork
+      - parcialNetwork
     healthcheck:
       test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/5003' || exit 1"]
       interval: 15s
       timeout: 5s
-      retries: 4
+      retries: 3
       start_period: 15s
 
   orders:
     build: /home/vagrant/webApp/microOrders
     container_name: webapp-orders
+    environment:
+      - PORT_ORDERS=${PORT_ORDERS:-5004}
+      - PORT_FRONTEND=${PORT_FRONTEND:-5001}
     ports:
-      - "5004:5004"
+      - "${PORT_ORDERS:-5004}:5004"
     depends_on:
       - orders_db
     networks:
-      - mynetwork
+      - parcialNetwork
     healthcheck:
       test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/5004' || exit 1"]
       interval: 15s
       timeout: 5s
-      retries: 4
+      retries: 3
       start_period: 15s
 
   # =======================================
@@ -182,12 +196,12 @@ services:
       MYSQL_USER: app_users
       MYSQL_PASSWORD: app_password
     ports:
-      - "3306:3306"
+      - "${PORT_USERS_DB:-3302}:3306"
     volumes:
       - db_users_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
-      - mynetwork
+      - parcialNetwork
 
   products_db:
     image: mysql:8.0
@@ -199,12 +213,12 @@ services:
       MYSQL_USER: app_products
       MYSQL_PASSWORD: app_password
     ports:
-      - "3307:3306"
+      - "${PORT_PRODUCTS_DB:-3303}:3306"
     volumes:
       - db_products_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
-      - mynetwork
+      - parcialNetwork
 
   orders_db:
     image: mysql:8.0
@@ -216,12 +230,12 @@ services:
       MYSQL_USER: app_orders
       MYSQL_PASSWORD: app_password
     ports:
-      - "3308:3306"
+      - "${PORT_ORDERS_DB:-3304}:3306"
     volumes:
       - db_orders_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
-      - mynetwork
+      - parcialNetwork
 
 volumes:
   db_users_data:
@@ -229,7 +243,7 @@ volumes:
   db_orders_data:
 
 networks:
-  mynetwork:
+  parcialNetwork:
     driver: bridge
     ipam:
       config:

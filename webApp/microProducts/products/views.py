@@ -2,12 +2,13 @@ from flask import Flask
 from products.controllers.product_controller import product_controller
 from db.db import db
 from flask_cors import CORS
+import os
 
 app = Flask(__name__)
 
 CORS(app, resources={
     r"/api/*": {
-        "origins": "http://192.168.80.3:5001",
+        "origins": f"http://192.168.80.3:{os.environ['PORT_FRONTEND']}",
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type"]
     }

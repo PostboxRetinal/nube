@@ -2,13 +2,15 @@ from flask import Blueprint, request, jsonify, session
 from orders.models.order_model import Orders
 from db.db import db
 import requests 
+import os
 
 order_controller = Blueprint('order_controller', __name__)
 
 # Descubrimiento de microservicios mediante Consul
 def get_products_service_url():
+    PORT_CONSUL = os.environ["PORT_CONSUL"]
     try:
-        response = requests.get('http://consul:8500/v1/catalog/service/products')
+        response = requests.get('http://consul:{PORT_CONSUL}/v1/catalog/service/products')
         if response.status_code == 200:
             services = response.json()
             if services:
