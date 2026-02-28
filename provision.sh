@@ -6,26 +6,19 @@ set -e
 echo "Starting provisioning..."
 
 # Update package index and install prerequisites
-sudo apt-get update -y
-sudo apt-get install -y ca-certificates curl gnupg debconf-utils
+sudo apt update -y
+sudo apt install -y ca-certificates curl gnupg debconf-utils
 
 echo "Installing Docker..."
 # Set up Docker's official GPG key and repository
 sudo install -m 0755 -d /etc/apt/keyrings
-if [ ! -f /etc/apt/keyrings/docker.gpg ]; then
-  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-  sudo chmod a+r /etc/apt/keyrings/docker.gpg
-fi
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --batch --dearmor --yes -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
 
-if [ ! -f /etc/apt/sources.list.d/docker.list ]; then
-  echo \
-    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-    sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-  sudo apt-get update -y
-fi
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update -y
 
-sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 # Manage Docker as a non-root user (vagrant)
 getent group docker || sudo groupadd docker
@@ -45,18 +38,15 @@ echo "Installing MySQL..."
 sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password password root'
 sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password root'
 
-sudo apt-get install mysql-server -y
+sudo apt install mysql-server -y
 sudo systemctl start mysql.service
-
-# NOTE: Ensure init.sql is synced to /home/vagrant/ before this step
-sudo mysql -h localhost -u root -proot < /home/vagrant/init.sql
 
 # Enable remote access to MySQL
 sudo sed -i 's/127.0.0.1/0.0.0.0/g' /etc/mysql/mysql.conf.d/mysqld.cnf
 sudo systemctl restart mysql.service
 
 echo "Installing Python and Flask ecosystem..."
-sudo apt-get install -y python3-dev default-libmysqlclient-dev build-essential pkg-config mysql-client python3-pip
+sudo apt install -y python3-dev default-libmysqlclient-dev build-essential pkg-config mysql-client python3-pip
 
 # SE ELIMINÓ --break-system-packages YA QUE UBUNTU 22.04 NO LO REQUIERE NI SOPORTA
 pip3 install Flask flask-cors Flask-MySQLdb Flask-SQLAlchemy

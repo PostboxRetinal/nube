@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Order</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+
+<div class="container mt-5">
+    <h2>Edit Order</h2>
+    <a href="/orders" class="btn btn-secondary mb-3">Back to Orders</a>
+    <div class="card" style="max-width: 500px;">
+        <div class="card-body">
+            <form id="edit-order-form">
+                <input type="hidden" id="order-id" value="">
+                
+                <div class="form-group">
+                    <label for="product_id">Product ID</label>
+                    <input type="number" class="form-control" id="product_id" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="quantity">Quantity</label>
+                    <input type="number" class="form-control" id="quantity" required>
+                </div>
+                
+                <button type="button" class="btn btn-primary" onclick="updateOrder()">Save Changes</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="/static/scriptOrders.js"></script>
+<script>
+    // Extraemos el ID de la orden (esto depende de cómo renderices la vista en Flask)
+    // Si usas render_template('editOrder.html', id=order_id):
+    const orderId = {{id}}; 
+
+    const EDIT_ORDER_PORT = 5004; // Asegúrate de que coincida con tu puerto
+    const EDIT_ORDER_URL = `http://${window.location.hostname}:${EDIT_ORDER_PORT}/api/orders`;
+
+    // Cargar los datos actuales de la orden al abrir la página
+    fetch(`${EDIT_ORDER_URL}/${orderId}`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('order-id').value = data.id;
+            document.getElementById('product_id').value = data.product_id;
+            document.getElementById('quantity').value = data.quantity;
+        })
+        .catch(error => console.error('Error fetching order data:', error));
+</script>
+
+</body>
+</html>

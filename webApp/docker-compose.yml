@@ -1,0 +1,236 @@
+services:
+  services_registrar:
+    image: curlimages/curl:latest
+    container_name: services_registrar
+    restart: "no"
+    networks:
+      - mynetwork
+
+    depends_on:
+      consul:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+      users:
+        condition: service_healthy
+      products:
+        condition: service_healthy
+      orders:
+        condition: service_healthy
+
+    environment:
+      - CONSUL_HTTP_TOKEN=${CONSUL_HTTP_TOKEN:-}
+
+    command: >-
+      sh -c '
+      echo "Registering services in Consul..." ;
+
+      SERVICES="
+      frontend:5001
+      users:5002
+      products:5003
+      orders:5004
+      " ;
+
+      for SERVICE in $$SERVICES; do
+        NAME=$$(echo $$SERVICE | cut -d":" -f1) ;
+        PORT=$$(echo $$SERVICE | cut -d":" -f2) ;
+
+        echo "Registering $$NAME on port $$PORT..." ;
+
+        curl -s -X PUT \
+          -H "Content-Type: application/json" \
+          -H "X-Consul-Token: ${CONSUL_HTTP_TOKEN:-}" \
+          -d "{
+            \"ID\": \"$${NAME}-service-1\",
+            \"Name\": \"$${NAME}\",
+            \"Address\": \"$${NAME}\",
+            \"Port\": $${PORT},
+            \"Check\": {
+              \"TCP\": \"$${NAME}:$${PORT}\",
+              \"Interval\": \"15s\",
+              \"Timeout\": \"5s\"
+            }
+          }" \
+          http://consul:8500/v1/agent/service/register ;
+
+      done ;
+
+      echo "All services registered successfully 🚀"
+      '
+
+  consul:
+    image: hashicorp/consul:1.22.3
+    container_name: consul
+    hostname: consul-server-1
+    restart: unless-stopped
+    command: >-
+      sh -c "consul agent -server -bootstrap-expect=1 -node=consul-server-1 -bind=0.0.0.0 -client=0.0.0.0 -ui -data-dir=/consul/data -config-dir=/consul/config -log-level=INFO"
+    ports:
+      - "${CONSUL_HTTP_PORT:-8500}:8500"
+      - "${CONSUL_DNS_PORT:-8600}:8600/tcp"
+      - "${CONSUL_DNS_PORT:-8600}:8600/udp"
+    environment:
+      - CONSUL_BIND_INTERFACE=eth0
+      - CONSUL_HTTP_TOKEN=${CONSUL_HTTP_TOKEN:-}
+    networks:
+      - mynetwork
+    healthcheck:
+      test: ["CMD", "consul", "members"]
+      interval: 15s
+      timeout: 10s
+      retries: 4
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+        reservations:
+          cpus: "0.10"
+          memory: 64M
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+      - DAC_OVERRIDE
+      - IPC_LOCK
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  frontend:
+    build: /home/vagrant/webApp/frontend
+    container_name: webapp-frontend
+    ports:
+      - "5001:5001"
+    depends_on:
+      - users
+      - products
+      - orders
+    networks:
+      - mynetwork
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/5001' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 15s
+
+  users:
+    build: /home/vagrant/webApp/microUsers
+    container_name: webapp-users
+    ports:
+      - "5002:5002"
+    depends_on:
+      - users_db
+    networks:
+      - mynetwork
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/5002' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 15s
+
+  products:
+    build: /home/vagrant/webApp/microProducts
+    container_name: webapp-products
+    ports:
+      - "5003:5003"
+    depends_on:
+      - products_db
+    networks:
+      - mynetwork
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/5003' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 15s
+
+  orders:
+    build: /home/vagrant/webApp/microOrders
+    container_name: webapp-orders
+    ports:
+      - "5004:5004"
+    depends_on:
+      - orders_db
+    networks:
+      - mynetwork
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/5004' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 15s
+
+  # =======================================
+  # CONTENEDORES DE BASES DE DATOS INDEPENDIENTES
+  # =======================================
+  users_db:
+    image: mysql:8.0
+    container_name: users_db
+    command: --performance_schema=OFF
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: users_db
+      MYSQL_USER: app_users
+      MYSQL_PASSWORD: app_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_users_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - mynetwork
+
+  products_db:
+    image: mysql:8.0
+    container_name: products_db
+    command: --performance_schema=OFF
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: products_db
+      MYSQL_USER: app_products
+      MYSQL_PASSWORD: app_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_products_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - mynetwork
+
+  orders_db:
+    image: mysql:8.0
+    container_name: orders_db
+    command: --performance_schema=OFF
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: orders_db
+      MYSQL_USER: app_orders
+      MYSQL_PASSWORD: app_password
+    ports:
+      - "3308:3306"
+    volumes:
+      - db_orders_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - mynetwork
+
+volumes:
+  db_users_data:
+  db_products_data:
+  db_orders_data:
+
+networks:
+  mynetwork:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
