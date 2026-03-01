@@ -1,41 +1,36 @@
-# Repositorio Computación en la Nube - Branch primerCorte
-# To Run application
+# Mini Store — Microservices - Parcial 1C
+## Desarrollado por Juan Eduardo Jaramillo y Sebastian Balanta
 
-## Start and SSH into Vagrant VM 
+Flask-based store management app with Users, Products, and Orders microservices orchestrated via Docker Compose and Consul service discovery.
 
-```
-vagrant up
-vagrant ssh servidorWeb
-```
+## Requirements
 
-## Run the webApp
+- [Docker](https://docs.docker.com/get-docker/)
+- [Docker Compose](https://docs.docker.com/compose/install/)
 
-```
-cd /home/vagrant/frontend
-export FLASK_APP=run.py
-/usr/local/bin/flask run --host=0.0.0.0 --port 5001
-```
+## Run
 
-## Run the Users Microservice
-
-```
-cd /home/vagrant/microUsers
-export FLASK_APP=run.py
-/usr/local/bin/flask run --host=0.0.0.0 --port 5002
+```bash
+cd webApp
+docker compose up --build
 ```
 
-## Run the Products Microservice
+| Service  | URL                        |
+|----------|----------------------------|
+| Frontend | http://localhost:5001       |
+| Users    | http://localhost:5002/api/users    |
+| Products | http://localhost:5003/api/products |
+| Orders   | http://localhost:5004/api/orders   |
+| Consul   | http://localhost:8500       |
 
-```
-cd /home/vagrant/microProducts
-export FLASK_APP=run.py
-/usr/local/bin/flask run --host=0.0.0.0 --port 5003
+## Stop
+
+```bash
+docker compose down
 ```
 
-## Run the Oders Microservice
+To also wipe the database volumes:
 
-```
-cd /home/vagrant/microOrders
-export FLASK_APP=run.py
-/usr/local/bin/flask run --host=0.0.0.0 --port 5004
+```bash
+docker compose down -v
 ```
