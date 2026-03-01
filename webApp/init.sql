@@ -2,43 +2,55 @@ CREATE DATABASE IF NOT EXISTS users_db;
 CREATE DATABASE IF NOT EXISTS products_db;
 CREATE DATABASE IF NOT EXISTS orders_db;
 
-use users_db;
+USE users_db;
 
 CREATE TABLE users (
-    id int NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    name varchar(255),
-    email varchar(255),
-    username varchar(255),
-    password varchar(255)
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255),
+    email VARCHAR(255),
+    username VARCHAR(255),
+    password VARCHAR(255)
 );
 
-INSERT INTO users VALUES(null, "juan", "juan@gmail.com", "juan", "123"),
-    (null, "maria", "maria@gmail.com", "maria", "456");
+INSERT INTO users VALUES
+    (null, "Juan", "juan12@gmail.com", "JuanSolano23", "juan123"),
+    (null, "Maria", "mariaT6@gmail.com", "MariaSoto_6", "maria456");
 
-use products_db;
+USE products_db;
 
 CREATE TABLE products (
-    id int NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    name varchar(255) NOT NULL,
-    description text,
-    price decimal(10,2) NOT NULL,
-    stock int NOT NULL
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    price DECIMAL(10,2) NOT NULL,
+    stock INT NOT NULL
 );
 
 INSERT INTO products VALUES
     (null, "Keyboard", "Mechanical keyboard", 79.99, 15),
     (null, "Mouse", "Wireless mouse", 29.99, 40);
 
-use orders_db;
+USE orders_db;
 
 CREATE TABLE orders (
-    id int NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    user_id int NOT NULL,
-    product_id int NOT NULL,
-    quantity int NOT NULL,
-    total decimal(10,2) NOT NULL
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    user_id INT NOT NULL,
+    total DECIMAL(10,2) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE order_items (
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    order_id CHAR(36) NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL,
+    subtotal DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
 
 INSERT INTO orders VALUES
-    (null, 1, 1, 1, 79.99),
-    (null, 2, 2, 2, 59.98);
+    ("00000000-0000-0000-0000-000000000001", 1, 139.97, NOW());
+
+INSERT INTO order_items VALUES
+    (null, "00000000-0000-0000-0000-000000000001", 1, 1, 79.99),
+    (null, "00000000-0000-0000-0000-000000000001", 2, 2, 59.98);

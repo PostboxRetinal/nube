@@ -1,5 +1,22 @@
 const PRODUCT_BASE_URL = `http://${window.location.hostname}:${PORT_PRODUCTS}/api/products`;
 const ORDER_BASE_URL = `http://${window.location.hostname}:${PORT_ORDERS}/api/orders`;
+const USER_BASE_URL = `http://${window.location.hostname}:${PORT_USERS}/api/users`;
+
+function loadUsers() {
+    fetch(USER_BASE_URL)
+        .then(response => response.json())
+        .then(users => {
+            const select = document.getElementById('user-select');
+            select.innerHTML = '<option value="">— Select a user —</option>';
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = `${user.name} (${user.username})`;
+                select.appendChild(option);
+            });
+        })
+        .catch(error => console.error('Error loading users:', error));
+}
 
 function getProducts() {
     fetch(PRODUCT_BASE_URL)
@@ -84,7 +101,7 @@ function createProduct() {
     .then(response => response.json().then(resData => ({ ok: response.ok, data: resData })))
     .then(({ ok, data }) => {
         if (!ok) {
-            alert('Error: ' + data.error);  // ← was: generic throw
+            alert('Error: ' + data.error);
             return;
         }
         alert('Producto creado correctamente');
@@ -117,7 +134,7 @@ function updateProduct() {
     .then(response => response.json().then(resData => ({ ok: response.ok, data: resData })))
     .then(({ ok, data }) => {
         if (!ok) {
-            alert('Error: ' + data.error);  // ← was: err.error
+            alert('Error: ' + data.error);
             return;
         }
         alert('Producto actualizado correctamente');
@@ -136,7 +153,7 @@ function deleteProduct(productId) {
         .then(response => response.json().then(resData => ({ ok: response.ok, data: resData })))
         .then(({ ok, data }) => {
             if (!ok) {
-                alert('Error: ' + data.error);  // ← was: generic throw
+                alert('Error: ' + data.error);
                 return;
             }
             console.log('Product deleted successfully');
@@ -147,6 +164,12 @@ function deleteProduct(productId) {
 }
 
 function createOrderFromProducts() {
+    const userId = parseInt(document.getElementById('user-select').value, 10);
+    if (!userId) {
+        alert('Por favor selecciona un usuario antes de crear la orden.');
+        return;
+    }
+
     const qtyInputs = document.querySelectorAll('.order-qty-input');
     const productsToOrder = [];
 
@@ -161,19 +184,18 @@ function createOrderFromProducts() {
     });
 
     if (productsToOrder.length === 0) {
-        alert("Please select at least one product with a quantity greater than 0.");
+        alert('Please select at least one product with a quantity greater than 0.');
         return;
     }
 
     fetch(ORDER_BASE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ products: productsToOrder }),
+        body: JSON.stringify({ user_id: userId, products: productsToOrder }),
     })
     .then(response => response.json().then(resData => ({ ok: response.ok, data: resData })))
     .then(({ ok, data }) => {
         if (!ok) {
-            // ← was: data.message — now includes extra context for 409
             let msg = data.error;
             if (data.available_stock !== undefined) {
                 msg += ` (Stock disponible: ${data.available_stock}, solicitado: ${data.requested_quantity})`;
@@ -184,7 +206,7 @@ function createOrderFromProducts() {
             alert('Error: ' + msg);
             return;
         }
-        alert('Order created successfully!');
+        alert(`Order created successfully! Order ID: ${data.order_id}`);
         getProducts();
         document.querySelectorAll('.order-qty-input').forEach(input => input.value = 0);
     })

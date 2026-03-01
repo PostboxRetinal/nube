@@ -56,7 +56,7 @@ services:
 
       done ;
 
-      echo "All services registered successfully 🚀"
+      echo "DONE: All services registered successfully ;) "
       '
 
   consul:

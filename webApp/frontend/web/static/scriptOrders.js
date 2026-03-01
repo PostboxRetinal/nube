@@ -4,31 +4,42 @@ function getOrders() {
     fetch(ORDER_BASE_URL)
         .then(response => response.json())
         .then(data => {
-            var orderListBody = document.querySelector('#order-list tbody');
-            orderListBody.innerHTML = '';
+            var tbody = document.querySelector('#order-list tbody');
+            tbody.innerHTML = '';
 
             data.forEach(order => {
                 var row = document.createElement('tr');
 
                 var idCell = document.createElement('td');
-                idCell.textContent = order.id;
+                idCell.className = 'order-id';
+                idCell.textContent = order.id.split('-')[0] + '…';
+                idCell.title = order.id;
                 row.appendChild(idCell);
 
                 var userCell = document.createElement('td');
-                userCell.textContent = order.user_id;
+                userCell.textContent = order.user;
                 row.appendChild(userCell);
-
-                var productCell = document.createElement('td');
-                productCell.textContent = order.product_id;
-                row.appendChild(productCell);
-
-                var qtyCell = document.createElement('td');
-                qtyCell.textContent = order.quantity;
-                row.appendChild(qtyCell);
 
                 var totalCell = document.createElement('td');
                 totalCell.textContent = order.total.toFixed(2);
                 row.appendChild(totalCell);
+
+                var createdCell = document.createElement('td');
+                createdCell.textContent = order.created_at;
+                row.appendChild(createdCell);
+
+                var itemsCell = document.createElement('td');
+                var toggleBtn = document.createElement('button');
+                toggleBtn.className = 'btn btn-outline-secondary btn-sm';
+                toggleBtn.textContent = `${order.items.length} item(s)`;
+                toggleBtn.onclick = function() {
+                    var itemsRow = document.getElementById('items-' + order.id);
+                    if (itemsRow) {
+                        itemsRow.style.display = itemsRow.style.display === 'none' ? '' : 'none';
+                    }
+                };
+                itemsCell.appendChild(toggleBtn);
+                row.appendChild(itemsCell);
 
                 var actionsCell = document.createElement('td');
                 var deleteBtn = document.createElement('button');
@@ -36,48 +47,44 @@ function getOrders() {
                 deleteBtn.className = 'btn btn-danger btn-sm';
                 deleteBtn.onclick = function() { deleteOrder(order.id); };
                 actionsCell.appendChild(deleteBtn);
-
                 row.appendChild(actionsCell);
-                orderListBody.appendChild(row);
+
+                tbody.appendChild(row);
+
+                var itemsRow = document.createElement('tr');
+                itemsRow.id = 'items-' + order.id;
+                itemsRow.className = 'items-row';
+                itemsRow.style.display = 'none';
+
+                var itemsTd = document.createElement('td');
+                itemsTd.colSpan = 6;
+
+                var itemsTable = document.createElement('table');
+                itemsTable.className = 'table items-table mb-0';
+
+                var thead = itemsTable.createTHead();
+                var headerRow = thead.insertRow();
+                ['Product', 'Quantity', 'Subtotal ($)'].forEach(text => {  // ← was: 'Product ID'
+                    var th = document.createElement('th');
+                    th.textContent = text;
+                    headerRow.appendChild(th);
+                });
+
+                var itbody = itemsTable.createTBody();
+                order.items.forEach(item => {
+                    var iRow = itbody.insertRow();
+                    // Product name with ID as fallback
+                    iRow.insertCell().textContent = item.product_name || `ID: ${item.product_id}`;  // ← new
+                    iRow.insertCell().textContent = item.quantity;
+                    iRow.insertCell().textContent = item.subtotal.toFixed(2);
+                });
+
+                itemsTd.appendChild(itemsTable);
+                itemsRow.appendChild(itemsTd);
+                tbody.appendChild(itemsRow);
             });
         })
         .catch(error => console.error('Error fetching orders:', error));
-}
-
-function createOrder() {
-    var productId = parseInt(document.getElementById('product_id').value, 10);
-    var quantity = parseInt(document.getElementById('quantity').value, 10);
-
-    var payload = {
-        products: [{ id: productId, quantity: quantity }]
-    };
-
-    fetch(ORDER_BASE_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-    })
-    .then(response => response.json().then(resData => ({ ok: response.ok, data: resData })))
-    .then(({ ok, data }) => {
-        if (!ok) {
-            // ← was: data.message — now reads data.error + optional inventory context
-            let msg = data.error;
-            if (data.available_stock !== undefined) {
-                msg += ` (Stock disponible: ${data.available_stock}, solicitado: ${data.requested_quantity})`;
-            }
-            if (data.product_id !== undefined) {
-                msg += ` — Producto ID: ${data.product_id}`;
-            }
-            alert('Error: ' + msg);
-            return;
-        }
-        alert('Order created successfully!');
-        getOrders();
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error inesperado al crear la orden');
-    });
 }
 
 function deleteOrder(orderId) {
@@ -88,39 +95,11 @@ function deleteOrder(orderId) {
         .then(response => response.json().then(resData => ({ ok: response.ok, data: resData })))
         .then(({ ok, data }) => {
             if (!ok) {
-                alert('Error: ' + data.error);  // ← was: generic throw
+                alert('Error: ' + data.error);
                 return;
             }
-            console.log('Order deleted');
             getOrders();
         })
         .catch(error => console.error('Error:', error));
     }
-}
-
-function updateOrder() {
-    var orderId = document.getElementById('order-id').value;
-    var data = {
-        product_id: parseInt(document.getElementById('product_id').value, 10),
-        quantity: parseInt(document.getElementById('quantity').value, 10)
-    };
-
-    fetch(`${ORDER_BASE_URL}/${orderId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-    })
-    .then(response => response.json().then(resData => ({ ok: response.ok, data: resData })))
-    .then(({ ok, data }) => {
-        if (!ok) {
-            alert('Error: ' + data.error);  // ← was: resData.message
-            return;
-        }
-        alert('Order updated successfully!');
-        window.location.href = '/orders';
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error inesperado al actualizar la orden');
-    });
 }

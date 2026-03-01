@@ -39,14 +39,10 @@
 </script>
 <script src="/static/scriptOrders.js"></script>
 <script>
-    // Extraemos el ID de la orden (esto depende de cómo renderices la vista en Flask)
-    // Si usas render_template('editOrder.html', id=order_id):
+
     const orderId = {{id}}; 
+    const EDIT_ORDER_URL = `http://${window.location.hostname}:${PORT_ORDERS}/api/orders`;
 
-    const EDIT_ORDER_PORT = 5004; // Asegúrate de que coincida con tu puerto
-    const EDIT_ORDER_URL = `http://${window.location.hostname}:${EDIT_ORDER_PORT}/api/orders`;
-
-    // Cargar los datos actuales de la orden al abrir la página
     fetch(`${EDIT_ORDER_URL}/${orderId}`)
         .then(response => response.json())
         .then(data => {

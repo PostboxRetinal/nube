@@ -11,11 +11,9 @@
             padding-top: 50px;
             padding-bottom: 20px;
         }
-
         .navbar {
             margin-bottom: 20px;
         }
-
         .form-container {
             max-width: 600px;
             margin: 0 auto;
@@ -71,9 +69,16 @@
             </thead>
             <tbody></tbody>
         </table>
+
+        <div class="form-group mt-3" style="max-width: 300px;">
+            <label for="user-select">Place order as</label>
+            <select class="form-control" id="user-select">
+                <option value="">— Loading users… —</option>
+            </select>
+        </div>
+
         <button type="button" class="btn btn-primary" onclick="getProducts()">Get Products</button>
-        <button type="button" class="btn btn-success" onclick="createOrderFromProducts()">Create Order with
-            Selected</button>
+        <button type="button" class="btn btn-success" onclick="createOrderFromProducts()">Create Order with Selected</button>
 
         <script>
             const PORT_USERS = "{{ PORT_USERS }}";
@@ -81,6 +86,14 @@
             const PORT_ORDERS = "{{ PORT_ORDERS }}";
         </script>
         <script src="static/scriptProducts.js"></script>
-</body>
+        <script>
+            
+            document.addEventListener("DOMContentLoaded", function () {
+                getProducts();
+                loadUsers();
+            });
+        </script>
+    </div>
 
+</body>
 </html>
