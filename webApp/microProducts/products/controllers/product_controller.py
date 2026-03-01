@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from products.models.product_model import Products
 from db.db import db
+from exceptions import BadRequestError, InternalServerError
 
 product_controller = Blueprint('product_controller', __name__)
 
@@ -33,6 +34,8 @@ def get_product(product_id):
 @product_controller.route('/api/products', methods=['POST'])
 def create_product():
     data = request.json
+    if not data:
+        raise BadRequestError("No se enviaron datos para crear el producto.")
     new_product = Products(
         name=data['name'],
         description=data.get('description'),
@@ -49,34 +52,32 @@ def update_product(product_id):
         return jsonify({'message': 'CORS preflight OK'}), 200
 
     product = Products.query.get_or_404(product_id)
-    
+
     data = request.json
     if not data:
-        return jsonify({'error': 'No se enviaron datos para actualizar'}), 400
+        raise BadRequestError("No se enviaron datos para actualizar.")
 
-    # Merge para campos de texto
     product.name = data.get('name', product.name)
     product.description = data.get('description', product.description)
-    
-    # Merge para números con validación (evita errores si envían strings vacíos)
+
     if 'price' in data and data['price'] not in [None, ""]:
         try:
             product.price = float(data['price'])
         except ValueError:
-            return jsonify({'error': 'El precio debe ser un número válido'}), 400
-            
+            raise BadRequestError("El precio debe ser un número válido.")
+
     if 'stock' in data and data['stock'] not in [None, ""]:
         try:
             product.stock = int(data['stock'])
         except ValueError:
-            return jsonify({'error': 'El stock debe ser un número entero'}), 400
+            raise BadRequestError("El stock debe ser un número entero.")
 
     try:
         db.session.commit()
         return jsonify({'message': 'Product updated successfully'}), 200
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        return jsonify({'error': 'Error interno del servidor al actualizar'}), 500
+        raise InternalServerError()
 
 @product_controller.route('/api/products/<int:product_id>', methods=['DELETE'])
 def delete_product(product_id):

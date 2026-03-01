@@ -47,4 +47,4 @@ def edit_order(id):
     return render_template('editOrder.html', id=id, **PORTS)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT_FRONTEND', 5001)), debug=True)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT_FRONTEND', 5001)), debug=os.environ.get('FLASK_DEBUG', 'false').lower() == 'true')

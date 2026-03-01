@@ -111,6 +111,7 @@ services:
       - PORT_USERS=${PORT_USERS:-5002}
       - PORT_PRODUCTS=${PORT_PRODUCTS:-5003}
       - PORT_ORDERS=${PORT_ORDERS:-5004}
+      - FLASK_DEBUG=${FLASK_DEBUG:-false}
     ports:
       - "${PORT_FRONTEND:-5001}:5001"
     depends_on:

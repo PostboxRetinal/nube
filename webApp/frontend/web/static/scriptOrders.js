@@ -31,11 +31,11 @@ function getOrders() {
                 row.appendChild(totalCell);
 
                 var actionsCell = document.createElement('td');
-                var deleteLink = document.createElement('button');
-                deleteLink.textContent = 'Delete';
-                deleteLink.className = 'btn btn-danger btn-sm';
-                deleteLink.onclick = function() { deleteOrder(order.id); };
-                actionsCell.appendChild(deleteLink);
+                var deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.className = 'btn btn-danger btn-sm';
+                deleteBtn.onclick = function() { deleteOrder(order.id); };
+                actionsCell.appendChild(deleteBtn);
 
                 row.appendChild(actionsCell);
                 orderListBody.appendChild(row);
@@ -48,35 +48,35 @@ function createOrder() {
     var productId = parseInt(document.getElementById('product_id').value, 10);
     var quantity = parseInt(document.getElementById('quantity').value, 10);
 
-    // Tu controlador de Python espera un objeto con una lista llamada "products"
     var payload = {
-        products: [
-            { id: productId, quantity: quantity }
-        ]
+        products: [{ id: productId, quantity: quantity }]
     };
 
     fetch(ORDER_BASE_URL, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
     })
-    .then(response => {
-        return response.json().then(data => {
-            if (!response.ok) {
-                throw new Error(data.message || 'Error creating order');
+    .then(response => response.json().then(resData => ({ ok: response.ok, data: resData })))
+    .then(({ ok, data }) => {
+        if (!ok) {
+            // ← was: data.message — now reads data.error + optional inventory context
+            let msg = data.error;
+            if (data.available_stock !== undefined) {
+                msg += ` (Stock disponible: ${data.available_stock}, solicitado: ${data.requested_quantity})`;
             }
-            return data;
-        });
-    })
-    .then(data => {
+            if (data.product_id !== undefined) {
+                msg += ` — Producto ID: ${data.product_id}`;
+            }
+            alert('Error: ' + msg);
+            return;
+        }
         alert('Order created successfully!');
-        getOrders(); // Recargamos la tabla
+        getOrders();
     })
     .catch(error => {
         console.error('Error:', error);
-        alert(error.message);
+        alert('Error inesperado al crear la orden');
     });
 }
 
@@ -85,12 +85,13 @@ function deleteOrder(orderId) {
         fetch(`${ORDER_BASE_URL}/${orderId}`, {
             method: 'DELETE',
         })
-        .then(response => {
-            if (!response.ok) { throw new Error('Network response was not ok'); }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Order deleted:', data);
+        .then(response => response.json().then(resData => ({ ok: response.ok, data: resData })))
+        .then(({ ok, data }) => {
+            if (!ok) {
+                alert('Error: ' + data.error);  // ← was: generic throw
+                return;
+            }
+            console.log('Order deleted');
             getOrders();
         })
         .catch(error => console.error('Error:', error));
@@ -106,26 +107,20 @@ function updateOrder() {
 
     fetch(`${ORDER_BASE_URL}/${orderId}`, {
         method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
     })
-    .then(response => {
-        return response.json().then(resData => {
-            if (!response.ok) {
-                throw new Error(resData.message || 'Error updating order');
-            }
-            return resData;
-        });
-    })
-    .then(data => {
-        console.log('Order updated:', data);
+    .then(response => response.json().then(resData => ({ ok: response.ok, data: resData })))
+    .then(({ ok, data }) => {
+        if (!ok) {
+            alert('Error: ' + data.error);  // ← was: resData.message
+            return;
+        }
         alert('Order updated successfully!');
-        window.location.href = '/orders'; // Redirigir a la lista de órdenes
+        window.location.href = '/orders';
     })
     .catch(error => {
-        console.error('Error:', error.message);
-        alert('Error updating order: ' + error.message);
+        console.error('Error:', error);
+        alert('Error inesperado al actualizar la orden');
     });
 }

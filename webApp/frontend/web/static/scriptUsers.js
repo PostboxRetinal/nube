@@ -7,7 +7,7 @@ function getUsers() {
             console.log(data);
 
             var userListBody = document.querySelector('#user-list tbody');
-            userListBody.innerHTML = ''; 
+            userListBody.innerHTML = '';
 
             data.forEach(user => {
                 var row = document.createElement('tr');
@@ -58,23 +58,19 @@ function createUser() {
 
     fetch(USER_BASE_URL, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
+    .then(response => response.json().then(resData => ({ ok: response.ok, data: resData })))
+    .then(({ ok, data }) => {
+        if (!ok) {
+            alert('Error: ' + data.error);  // ← was: data.message
+            return;
         }
-        return response.json();
+        alert('Usuario creado correctamente');
+        getUsers();
     })
-    .then(data => {
-        console.log(data);
-    })
-    .catch(error => {
-        console.error('Error:', error);
-    });
+    .catch(error => console.error('Error:', error));
 }
 
 function updateUser() {
@@ -95,24 +91,20 @@ function updateUser() {
 
     fetch(`${USER_BASE_URL}/${userId}`, {
         method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
     })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(err => { throw new Error(err.error || 'Error en la actualización'); });
+    .then(response => response.json().then(resData => ({ ok: response.ok, data: resData })))
+    .then(({ ok, data }) => {
+        if (!ok) {
+            alert('Error: ' + data.error);  // ← was: err.error
+            return;
         }
-        return response.json();
-    })
-    .then(data => {
-        console.log('Usuario actualizado:', data);
         alert('Usuario actualizado correctamente');
     })
     .catch(error => {
-        console.error('Error:', error.message);
-        alert('Error al actualizar: ' + error.message);
+        console.error('Error:', error);
+        alert('Error inesperado al actualizar');
     });
 }
 
@@ -122,18 +114,15 @@ function deleteUser(userId) {
         fetch(`${USER_BASE_URL}/${userId}`, {
             method: 'DELETE',
         })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
+        .then(response => response.json().then(resData => ({ ok: response.ok, data: resData })))
+        .then(({ ok, data }) => {
+            if (!ok) {
+                alert('Error: ' + data.error);  // ← was: generic throw
+                return;
             }
-            return response.json();
-        })
-        .then(data => {
-            console.log('User deleted successfully:', data);
+            console.log('User deleted successfully');
             getUsers();
         })
-        .catch(error => {
-            console.error('Error:', error);
-        });
+        .catch(error => console.error('Error:', error));
     }
 }

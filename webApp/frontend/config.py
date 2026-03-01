@@ -1,2 +1,3 @@
+import os
 class Config:
-    DEBUG = True
+    DEBUG = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'

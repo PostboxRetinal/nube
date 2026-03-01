@@ -35,11 +35,11 @@ function getProducts() {
                 qtyInput.value = '0';
                 qtyInput.className = 'form-control order-qty-input';
                 qtyInput.dataset.productId = product.id;
-                
+
                 if (product.stock === 0) {
-                    qtyInput.disabled = true; 
+                    qtyInput.disabled = true;
                 }
-                
+
                 qtyCell.appendChild(qtyInput);
                 row.appendChild(qtyCell);
 
@@ -56,7 +56,7 @@ function getProducts() {
                 deleteLink.textContent = 'Delete';
                 deleteLink.className = 'btn btn-danger';
                 deleteLink.addEventListener('click', function(e) {
-                    e.preventDefault(); 
+                    e.preventDefault();
                     deleteProduct(product.id);
                 });
                 actionsCell.appendChild(deleteLink);
@@ -78,24 +78,19 @@ function createProduct() {
 
     fetch(PRODUCT_BASE_URL, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
+    .then(response => response.json().then(resData => ({ ok: response.ok, data: resData })))
+    .then(({ ok, data }) => {
+        if (!ok) {
+            alert('Error: ' + data.error);  // ← was: generic throw
+            return;
         }
-        return response.json();
+        alert('Producto creado correctamente');
+        getProducts();
     })
-    .then(data => {
-        console.log(data);
-        getProducts(); 
-    })
-    .catch(error => {
-        console.error('Error:', error);
-    });
+    .catch(error => console.error('Error:', error));
 }
 
 function updateProduct() {
@@ -116,24 +111,20 @@ function updateProduct() {
 
     fetch(`${PRODUCT_BASE_URL}/${productId}`, {
         method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
     })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(err => { throw new Error(err.error || 'Error en la actualización'); });
+    .then(response => response.json().then(resData => ({ ok: response.ok, data: resData })))
+    .then(({ ok, data }) => {
+        if (!ok) {
+            alert('Error: ' + data.error);  // ← was: err.error
+            return;
         }
-        return response.json();
-    })
-    .then(data => {
-        console.log('Producto actualizado:', data);
         alert('Producto actualizado correctamente');
     })
     .catch(error => {
-        console.error('Error:', error.message);
-        alert('Error al actualizar: ' + error.message);
+        console.error('Error:', error);
+        alert('Error inesperado al actualizar');
     });
 }
 
@@ -142,19 +133,16 @@ function deleteProduct(productId) {
         fetch(`${PRODUCT_BASE_URL}/${productId}`, {
             method: 'DELETE',
         })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
+        .then(response => response.json().then(resData => ({ ok: response.ok, data: resData })))
+        .then(({ ok, data }) => {
+            if (!ok) {
+                alert('Error: ' + data.error);  // ← was: generic throw
+                return;
             }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Product deleted successfully:', data);
+            console.log('Product deleted successfully');
             getProducts();
         })
-        .catch(error => {
-            console.error('Error:', error);
-        });
+        .catch(error => console.error('Error:', error));
     }
 }
 
@@ -177,33 +165,31 @@ function createOrderFromProducts() {
         return;
     }
 
-    const payload = {
-        products: productsToOrder
-    };
-
     fetch(ORDER_BASE_URL, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ products: productsToOrder }),
     })
-    .then(response => {
-        return response.json().then(data => {
-            if (!response.ok) {
-                throw new Error(data.message || 'Error creating order');
+    .then(response => response.json().then(resData => ({ ok: response.ok, data: resData })))
+    .then(({ ok, data }) => {
+        if (!ok) {
+            // ← was: data.message — now includes extra context for 409
+            let msg = data.error;
+            if (data.available_stock !== undefined) {
+                msg += ` (Stock disponible: ${data.available_stock}, solicitado: ${data.requested_quantity})`;
             }
-            return data;
-        });
-    })
-    .then(data => {
+            if (data.product_id !== undefined) {
+                msg += ` — Producto ID: ${data.product_id}`;
+            }
+            alert('Error: ' + msg);
+            return;
+        }
         alert('Order created successfully!');
-        getProducts(); 
-        
+        getProducts();
         document.querySelectorAll('.order-qty-input').forEach(input => input.value = 0);
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error: ' + error.message);
+        alert('Error inesperado al crear la orden');
     });
 }
