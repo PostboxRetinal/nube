@@ -8,6 +8,9 @@ Flask-based store management app with Users, Products, and Orders microservices 
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
 
+> **Note:** The project looks for a `.env` file for configuration. It will fall back to default values if the file is missing, but you should create and populate `.env` before running the services to ensure the intended settings are used.
+
+
 ## Run
 
 ```bash

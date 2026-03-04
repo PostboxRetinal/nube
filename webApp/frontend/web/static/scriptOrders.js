@@ -64,7 +64,7 @@ function getOrders() {
 
                 var thead = itemsTable.createTHead();
                 var headerRow = thead.insertRow();
-                ['Product', 'Quantity', 'Subtotal ($)'].forEach(text => {  // ← was: 'Product ID'
+                ['Product', 'Quantity', 'Subtotal ($)'].forEach(text => {
                     var th = document.createElement('th');
                     th.textContent = text;
                     headerRow.appendChild(th);
@@ -74,7 +74,7 @@ function getOrders() {
                 order.items.forEach(item => {
                     var iRow = itbody.insertRow();
                     // Product name with ID as fallback
-                    iRow.insertCell().textContent = item.product_name || `ID: ${item.product_id}`;  // ← new
+                    iRow.insertCell().textContent = item.product_name || `ID: ${item.product_id}`;
                     iRow.insertCell().textContent = item.quantity;
                     iRow.insertCell().textContent = item.subtotal.toFixed(2);
                 });

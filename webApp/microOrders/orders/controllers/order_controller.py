@@ -80,7 +80,7 @@ def get_orders():
             'items': [
                 {
                     'product_id': item.product_id,
-                    'product_name': get_product_name(item.product_id),  # ← new
+                    'product_name': get_product_name(item.product_id),
                     'quantity': item.quantity,
                     'subtotal': float(item.subtotal)
                 }
