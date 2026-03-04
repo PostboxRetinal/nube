@@ -104,7 +104,7 @@ function createProduct() {
             alert('Error: ' + data.error);
             return;
         }
-        alert('Producto creado correctamente');
+        alert('Product created successfully');
         getProducts();
     })
     .catch(error => console.error('Error:', error));
@@ -137,11 +137,11 @@ function updateProduct() {
             alert('Error: ' + data.error);
             return;
         }
-        alert('Producto actualizado correctamente');
+        alert('Product updated successfully');
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error inesperado al actualizar');
+        alert('Unexpected error updating product');
     });
 }
 
@@ -166,7 +166,7 @@ function deleteProduct(productId) {
 function createOrderFromProducts() {
     const userId = parseInt(document.getElementById('user-select').value, 10);
     if (!userId) {
-        alert('Por favor selecciona un usuario antes de crear la orden.');
+        alert('Please select a user before creating the order.');
         return;
     }
 
@@ -198,10 +198,10 @@ function createOrderFromProducts() {
         if (!ok) {
             let msg = data.error;
             if (data.available_stock !== undefined) {
-                msg += ` (Stock disponible: ${data.available_stock}, solicitado: ${data.requested_quantity})`;
+                msg += `\n(Available stock: ${data.available_stock}, requested: ${data.requested_quantity})`;
             }
             if (data.product_id !== undefined) {
-                msg += ` — Producto ID: ${data.product_id}`;
+                msg += ` — Product ID: ${data.product_id}`;
             }
             alert('Error: ' + msg);
             return;
@@ -212,6 +212,6 @@ function createOrderFromProducts() {
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error inesperado al crear la orden');
+        alert('Unexpected error creating order');
     });
 }

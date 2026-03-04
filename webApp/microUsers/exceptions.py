@@ -19,14 +19,14 @@ class AppError(HTTPException):
 
 class BadRequestError(AppError):
     code = 400
-    description = "Bad request. Please check the data you submitted."
+    description = "400 | Bad request. Please check the data you submitted."
 
 class NotFoundError(AppError):
     code = 404
-    description = "Resource not found."
+    description = "404 | Resource not found."
 
 class ProductNotFoundError(NotFoundError):
-    description = "Producto no existe."
+    description = "404 | Product not found."
 
     def __init__(self, product_id: Optional[int] = None):
         payload = {"product_id": product_id} if product_id is not None else {}
@@ -34,7 +34,7 @@ class ProductNotFoundError(NotFoundError):
 
 class InsufficientInventoryError(AppError):
     code = 409
-    description = "Inventario insuficiente."
+    description = "409 | Insufficient inventory."
 
     def __init__(self, product_id: Optional[int] = None, available: Optional[int] = None, requested: Optional[int] = None):
         payload = {}
@@ -48,4 +48,4 @@ class InsufficientInventoryError(AppError):
 
 class InternalServerError(AppError):
     code = 500
-    description = "Error interno. Por favor intente más tarde."
+    description = "500 | Internal error. Please try again later."

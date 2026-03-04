@@ -21,7 +21,7 @@ def get_products_service_url():
                 port = service.get('ServicePort')
                 return f"http://{address}:{port}"
     except Exception as e:
-        print(f"Error consultando a Consul para products: {e}")
+        print(f"Error querying Consul for products: {e}")
     return None
 
 def get_users_service_url():
@@ -36,7 +36,7 @@ def get_users_service_url():
                 port = service.get('ServicePort')
                 return f"http://{address}:{port}"
     except Exception as e:
-        print(f"Error consultando a Consul para users: {e}")
+        print(f"Error querying Consul for users: {e}")
     return None
 
 @order_controller.route('/api/orders', methods=['GET'])
@@ -70,7 +70,7 @@ def get_orders():
                 if user_resp.status_code == 200:
                     user_name = user_resp.json().get('name', user_name)
             except requests.exceptions.RequestException as e:
-                print(f"Error conectando con Users para el ID {o.user_id}: {e}")
+                print(f"Error connecting to Users for ID {o.user_id}: {e}")
 
         result.append({
             'id': o.id,
@@ -97,14 +97,14 @@ def create_order():
     user_id = data.get('user_id') if data else None
 
     if not products or not isinstance(products, list):
-        raise BadRequestError("Falta la información de los productos.")
+        raise BadRequestError("Product information is missing.")
 
     if not user_id:
-        raise BadRequestError("Debe seleccionar un usuario.")
+        raise BadRequestError("A user must be selected.")
 
     products_url = get_products_service_url()
     if not products_url:
-        raise InternalServerError("Servicio de productos no disponible en Consul.")
+        raise InternalServerError("Products service unavailable in Consul.")
 
     productos_validados = []
 
@@ -113,17 +113,17 @@ def create_order():
         qty = item.get('quantity')
 
         if prod_id is None or qty is None:
-            raise BadRequestError("Cada producto debe incluir 'id' y 'quantity'.")
+            raise BadRequestError("Each product must include 'id' and 'quantity'.")
 
         try:
             prod_resp = requests.get(f"{products_url}/api/products/{prod_id}", timeout=5)
         except requests.exceptions.RequestException:
-            raise InternalServerError("Error de conexión con servicio de productos.")
+            raise InternalServerError("Connection error with products service.")
 
         if prod_resp.status_code == 404:
             raise ProductNotFoundError(product_id=prod_id)
         elif prod_resp.status_code != 200:
-            raise InternalServerError("Error al consultar producto.")
+            raise InternalServerError("Error querying product.")
 
         prod_data = prod_resp.json()
 
@@ -163,7 +163,7 @@ def create_order():
                 timeout=5
             )
             if update_resp.status_code not in [200, 204]:
-                raise InternalServerError("Error al actualizar el inventario.")
+                raise InternalServerError("Error updating inventory.")
 
             db.session.add(OrderItems(
                 order_id=order_id,
@@ -173,7 +173,7 @@ def create_order():
             ))
 
         db.session.commit()
-        return jsonify({'message': 'Orden creada exitosamente', 'order_id': order_id}), 201
+        return jsonify({'message': 'Order created successfully', 'order_id': order_id}), 201
 
     except Exception:
         db.session.rollback()

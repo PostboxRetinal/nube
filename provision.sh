@@ -10,6 +10,7 @@ sudo apt update -y
 sudo apt install -y ca-certificates curl gnupg debconf-utils
 
 echo "Installing Docker..."
+
 # Set up Docker's official GPG key and repository
 sudo install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --batch --dearmor --yes -o /etc/apt/keyrings/docker.gpg
@@ -17,7 +18,6 @@ sudo chmod a+r /etc/apt/keyrings/docker.gpg
 
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 sudo apt update -y
-
 sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 # Manage Docker as a non-root user (vagrant)
@@ -34,6 +34,7 @@ if ! sudo systemctl is-active --quiet docker; then
 fi
 
 echo "Installing MySQL..."
+
 # Preconfigure MySQL root password for unattended installation
 sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password password root'
 sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password root'
@@ -45,10 +46,10 @@ sudo systemctl start mysql.service
 sudo sed -i 's/127.0.0.1/0.0.0.0/g' /etc/mysql/mysql.conf.d/mysqld.cnf
 sudo systemctl restart mysql.service
 
+# Install Python and Flask ecosystem
 echo "Installing Python and Flask ecosystem..."
 sudo apt install -y python3-dev default-libmysqlclient-dev build-essential pkg-config mysql-client python3-pip
 
-# SE ELIMINÓ --break-system-packages YA QUE UBUNTU 22.04 NO LO REQUIERE NI SOPORTA
 pip3 install Flask flask-cors Flask-MySQLdb Flask-SQLAlchemy
 
-echo "Provisioning completed successfully."
+echo "Provisioning completed successfully ;)"

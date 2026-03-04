@@ -23,7 +23,7 @@ def create_user():
     print("creando usuario")
     data = request.json
     if not data:
-        raise BadRequestError("No se enviaron datos para crear el usuario.")
+        raise BadRequestError("No data provided.")
     new_user = Users(name=data['name'], email=data['email'], username=data['username'], password=data['password'])
     db.session.add(new_user)
     db.session.commit()
@@ -34,12 +34,12 @@ def update_user(user_id):
     if request.method == 'OPTIONS':
         return jsonify({'message': 'CORS preflight OK'}), 200
 
-    print(f"actualizando usuario {user_id}")
+    print(f"updating user {user_id}")
     user = Users.query.get_or_404(user_id)
 
     data = request.json
     if not data:
-        raise BadRequestError("No se enviaron datos para actualizar.")
+        raise BadRequestError("No data provided.")
 
     user.name = data.get('name', user.name)
     user.email = data.get('email', user.email)

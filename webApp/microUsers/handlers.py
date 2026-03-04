@@ -37,20 +37,20 @@ def register_error_handlers(app):
 
     @app.errorhandler(400)
     def bad_request(exc):
-        return _json_error(400, "Bad request. Please check the data you submitted.")
+        return _json_error(400, "400 | Bad request. Please check the data you submitted.")
 
     @app.errorhandler(404)
     def not_found(exc):
-        return _json_error(404, "Producto no existe.")
+        return _json_error(404, "404 | Resource not found.")
 
     @app.errorhandler(409)
     def conflict(exc):
-        return _json_error(409, "Inventario insuficiente.")
+        return _json_error(409, "409 | Insufficient inventory.")
 
     @app.errorhandler(500)
     def internal_error(exc):
         logger.error("Unhandled 500:\n%s", traceback.format_exc())
-        return _json_error(500, "Error interno. Por favor intente más tarde.")
+        return _json_error(500, "500 | Internal error. Please try again later.")
 
     @app.errorhandler(Exception)
     def handle_unexpected(exc):
@@ -60,4 +60,4 @@ def register_error_handlers(app):
             str(exc),
             traceback.format_exc(),
         )
-        return _json_error(500, "Error interno. Por favor intente más tarde.")
+        return _json_error(500, "500 | Internal error. Please try again later.")

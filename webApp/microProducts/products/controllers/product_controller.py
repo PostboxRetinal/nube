@@ -35,7 +35,7 @@ def get_product(product_id):
 def create_product():
     data = request.json
     if not data:
-        raise BadRequestError("No se enviaron datos para crear el producto.")
+        raise BadRequestError("No data provided.")
     new_product = Products(
         name=data['name'],
         description=data.get('description'),
@@ -55,7 +55,7 @@ def update_product(product_id):
 
     data = request.json
     if not data:
-        raise BadRequestError("No se enviaron datos para actualizar.")
+        raise BadRequestError("No data provided.")
 
     product.name = data.get('name', product.name)
     product.description = data.get('description', product.description)
@@ -64,13 +64,13 @@ def update_product(product_id):
         try:
             product.price = float(data['price'])
         except ValueError:
-            raise BadRequestError("El precio debe ser un número válido.")
+            raise BadRequestError("The price must be a valid number.")
 
     if 'stock' in data and data['stock'] not in [None, ""]:
         try:
             product.stock = int(data['stock'])
         except ValueError:
-            raise BadRequestError("El stock debe ser un número entero.")
+            raise BadRequestError("The stock must be a valid integer.")
 
     try:
         db.session.commit()

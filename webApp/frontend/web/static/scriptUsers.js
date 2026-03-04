@@ -4,7 +4,6 @@ function getUsers() {
     fetch(USER_BASE_URL)
         .then(response => response.json())
         .then(data => {
-            console.log(data);
 
             var userListBody = document.querySelector('#user-list tbody');
             userListBody.innerHTML = '';
@@ -64,10 +63,10 @@ function createUser() {
     .then(response => response.json().then(resData => ({ ok: response.ok, data: resData })))
     .then(({ ok, data }) => {
         if (!ok) {
-            alert('Error: ' + data.error);  // ← was: data.message
+            alert('Error: ' + data.error);
             return;
         }
-        alert('Usuario creado correctamente');
+        alert('User created successfully');
         getUsers();
     })
     .catch(error => console.error('Error:', error));
@@ -97,14 +96,14 @@ function updateUser() {
     .then(response => response.json().then(resData => ({ ok: response.ok, data: resData })))
     .then(({ ok, data }) => {
         if (!ok) {
-            alert('Error: ' + data.error);  // ← was: err.error
+            alert('Error: ' + data.error);
             return;
         }
-        alert('Usuario actualizado correctamente');
+        alert('User updated successfully');
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error inesperado al actualizar');
+        alert('Unexpected error updating user');
     });
 }
 
@@ -117,7 +116,7 @@ function deleteUser(userId) {
         .then(response => response.json().then(resData => ({ ok: response.ok, data: resData })))
         .then(({ ok, data }) => {
             if (!ok) {
-                alert('Error: ' + data.error);  // ← was: generic throw
+                alert('Error: ' + data.error);
                 return;
             }
             console.log('User deleted successfully');
