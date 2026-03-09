@@ -21,6 +21,8 @@ c.NotebookApp.token = ''
 c.NotebookApp.password = ''
 EOF
 
+chown -R vagrant:vagrant /home/vagrant/.jupyter 
+
 echo "Iniciando Jupyter al arranque..."
 cat <<EOF > /etc/systemd/system/jupyter.service
 [Unit]
