@@ -1,0 +1,22 @@
+version: "2"
+services:
+  haproxy:
+    build: ./haproxy
+    links:
+      - web1
+      - web2
+      - web3
+    ports:
+      - "5080:80"
+  web1:
+    build: ./web
+    volumes:
+      - ./web/html1:/var/www/html/
+  web2:
+    build: ./web
+    volumes:
+      - ./web/html2:/var/www/html/
+  web3:
+    build: ./web
+    volumes:
+      - ./web/html3:/var/www/html/
