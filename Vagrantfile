@@ -7,28 +7,23 @@ Vagrant.configure("2") do |config|
     lv.cpus = 2
     lv.memory = 3072
   end
-  
-  config.vm.synced_folder ".", "/vagrant", 
-                          type: "nfs", 
-                          nfs_version: 4, 
-                          nfs_udp: false
+
+  config.vm.synced_folder ".", "/vagrant",
+    type: "nfs",
+    nfs_version: 4,
+    nfs_udp: false
 
   config.vm.synced_folder "/home/bastian/Documents/2026-1S/CONU/vms/shared", "/shared",
-                          type: "nfs", 
-                          nfs_version: 4,
-                          nfs_udp: false
+    type: "nfs", 
+    nfs_version: 4,
+    nfs_udp: false
 
-  config.vm.provision "shell", path: "provision.sh"
+  config.vm.define :server_kubernetes do |server_kubernetes|
+    server_kubernetes.vm.box = "generic/ubuntu2204"
+    server_kubernetes.vm.network :private_network, ip: "192.168.100.3"
+    server_kubernetes.vm.hostname = "serverKubernetes"
 
-  config.vm.define :servidor do |servidor|
-    servidor.vm.box = "generic/ubuntu2204"
-    servidor.vm.network :private_network, ip: "192.168.100.3"
-    servidor.vm.hostname = "servidor"
-  end
-
-  config.vm.define :cliente do |cliente|
-    cliente.vm.box = "generic/ubuntu2204"
-    cliente.vm.network :private_network, ip: "192.168.100.2"
-    cliente.vm.hostname = "cliente"
+    config.vm.provision "shell", path: "../../shared/nube/docker_provision.sh"
+    config.vm.provision "shell", path: "../../shared/nube/provision.sh"
   end
 end
