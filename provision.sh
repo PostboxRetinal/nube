@@ -1,49 +1,32 @@
 #!/bin/bash
-# provision.sh - Docker Installation for Ubuntu (Latest LTS)
+# provision.sh - minikube provisioning script
 
 set -e
+echo "Starting minikube + kubectl provisioning script..."
 
-echo "Starting Docker installation..."
-
-# 1. Update package index and install prerequisites
 apt-get update -y
-apt-get install -y ca-certificates curl gnupg
+sudo apt-get install -y apt-transport-https ca-certificates curl gnupg
+echo "Installing minikube"
 
-# 2. Set up Docker's official GPG key (Idempotent check)
-install -m 0755 -d /etc/apt/keyrings
-if [ ! -f /etc/apt/keyrings/docker.gpg ]; then
-  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-  chmod a+r /etc/apt/keyrings/docker.gpg
-fi
+curl -LO https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64
+sudo install minikube-linux-amd64 /usr/local/bin/minikube && rm minikube-linux-amd64
+echo "Minikube installed successfully :)"
 
-# 3. Add the repository to Apt sources
-if [ ! -f /etc/apt/sources.list.d/docker.list ]; then
-  echo \
-    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-    tee /etc/apt/sources.list.d/docker.list > /dev/null
-  apt-get update -y
-fi
+echo "Installing kubectl..."
+echo "1) Downloading kubectl..."
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 
-# 4. Install Docker Engine, CLI, and Compose
-apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+echo "2) Verifying kubectl..."
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl.sha256"
+echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
 
-# 5. Manage Docker as a non-root user (vagrant)
-getent group docker || groupadd docker
-usermod -aG docker vagrant
+echo "3) Adding gpg-sign and kubernetes apt repository..."
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.35/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+sudo chmod 644 /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.35/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+sudo chmod 644 /etc/apt/sources.list.d/kubernetes.list
 
-# 6. Configure systemd to start Docker on boot
-systemctl enable --now docker.service
-systemctl enable --now containerd.service
-
-# 7. Verification
-echo "Verifying installation..."
-if systemctl is-active --quiet docker; then
-  echo "Docker service is running."
-  docker --version
-else
-  echo "Docker failed to start." >&2
-  exit 1
-fi
-
-echo "Docker provisioning complete."
+echo "4) Installing kubectl..."
+sudo apt-get update
+sudo apt-get install -y kubectl
+echo "kubectl installed successfully :)"
