@@ -7,7 +7,7 @@ services:
       - "8081:80"
     volumes:
       - type: bind
-        source: /home/vagrant/votacion/html
+        source: /shared/nube/votacion/html
         target: /usr/share/nginx/html
     deploy:
       replicas: 3
