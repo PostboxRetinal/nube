@@ -1,6 +1,0 @@
-{
-	"dependencies": {
-		"express": "^4.22.1",
-		"consul": "^2.0.1"
-	}
-}
