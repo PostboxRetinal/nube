@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Resultados</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #0f3460;
+      color: #eee;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 8px;
+      color: #e94560;
+    }
+
+    p {
+      color: #aaa;
+      margin-bottom: 40px;
+    }
+
+    .barra-container {
+      width: min(500px, 100%);
+      background: #16213e;
+      border-radius: 12px;
+      padding: 28px;
+    }
+
+    .opcion {
+      margin-bottom: 20px;
+    }
+
+    .label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 1rem;
+    }
+
+    .barra-bg {
+      background: #1a1a2e;
+      border-radius: 999px;
+      height: 22px;
+      overflow: hidden;
+    }
+
+    .barra {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 1s ease;
+    }
+
+    .docker-bar {
+      background: #2496ed;
+      width: 62%;
+    }
+
+    .k8s-bar {
+      background: #326ce5;
+      width: 38%;
+    }
+
+    .info {
+      margin-top: 32px;
+      font-size: 0.85rem;
+      color: #aaa;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Resultados de Votación</h1>
+  <p>Distribución actual de votos</p>
+  <div class="barra-container">
+    <div class="opcion">
+      <div class="label"><span>Docker</span><span>62%</span></div>
+      <div class="barra-bg">
+        <div class="barra docker-bar"></div>
+      </div>
+    </div>
+    <div class="opcion">
+      <div class="label"><span>Kubernetes</span><span>38%</span></div>
+      <div class="barra-bg">
+        <div class="barra k8s-bar"></div>
+      </div>
+    </div>
+  </div>
+  <div class="info">
+    Servicio result — Apache httpd — Docker Swarm worker node
+  </div>
+</body>
+
+</html>

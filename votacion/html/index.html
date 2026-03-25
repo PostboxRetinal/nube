@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <title>App de Votación</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 8px;
+      color: #e94560;
+    }
+
+    p {
+      color: #aaa;
+      margin-bottom: 40px;
+    }
+
+    .opciones {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn {
+      background: #16213e;
+      border: 2px solid #e94560;
+      color: white;
+      padding: 30px 50px;
+      font-size: 1.2rem;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: #e94560;
+      transform: scale(1.05);
+    }
+
+    .info {
+      margin-top: 40px;
+      background: #16213e;
+      padding: 16px 28px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      color: #aaa;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Votación Docker Swarm</h1>
+  <p>Elige tu tecnología de contenedores favorita</p>
+  <div class="opciones">
+    <button class="btn" onclick="votar(this)">Docker</button>
+    <button class="btn" onclick="votar(this)">Kubernetes</button>
+  </div>
+  <div class="info">
+    Servicio desplegado con Docker Swarm — 3 réplicas con load balancing
+  </div>
+  <script>
+    function votar(btn) {
+      btn.style.background = '#e94560';
+      btn.textContent = btn.textContent + ' ✓';
+      setTimeout(() => {
+        btn.style.background = '#16213e';
+        btn.textContent = btn.textContent.replace(' ✓', '');
+      }, 1500);
+    }
+  </script>
+</body>
+
+</html>
