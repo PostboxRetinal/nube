@@ -41,6 +41,9 @@
     name: "{{ haproxy_service }}"
     state: started
 
+- name: Apply pending HAProxy configuration changes
+  meta: flush_handlers
+
 - name: Wait for HAProxy to be ready
   wait_for:
     port: "{{ haproxy_frontend_port }}"

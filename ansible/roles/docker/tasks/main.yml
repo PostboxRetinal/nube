@@ -52,6 +52,12 @@
     name: "{{ docker_packages }}"
     state: present
 
+- name: Install Python dependencies for Ansible Docker modules
+  apt:
+    name:
+      - python3-requests
+    state: present
+
 - name: Ensure Docker service is started and enabled
   service:
     name: "{{ docker_service }}"

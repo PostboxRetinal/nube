@@ -6,7 +6,8 @@
 all:
   vars:
     ansible_user: ${ssh_user}
-    ansible_ssh_private_key_file: ${ssh_private_key}
+    ansible_password: ${ssh_password}
+    ansible_become_password: ${ssh_password}
     ansible_python_interpreter: /usr/bin/python3
     ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
     
@@ -36,9 +37,11 @@ all:
     haproxy:
       hosts:
         vm-haproxy:
-          ansible_host: ${haproxy_ip}
+          ansible_host: 127.0.0.1
+          ansible_port: ${haproxy_ssh_port}
           
     microservices:
       hosts:
         vm-microservices:
-          ansible_host: ${microservices_ip}
+          ansible_host: 127.0.0.1
+          ansible_port: ${microservices_ssh_port}

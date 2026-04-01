@@ -11,24 +11,57 @@ data "local_file" "ssh_public_key" {
 }
 
 # -----------------------------------------------------------------------------
-# Virtual Machines
+# Local Values
 # -----------------------------------------------------------------------------
 
-resource "virtualbox_vm" "vm" {
+locals {
+  ssh_forward_ports = {
+    haproxy       = 2221
+    microservices = 2222
+  }
+}
+
+# -----------------------------------------------------------------------------
+# Virtual Machines (VBoxManage workaround for provider guestproperty issue)
+# -----------------------------------------------------------------------------
+
+resource "null_resource" "virtualbox_vm" {
   for_each = var.vms
 
-  name   = each.value.hostname
-  image  = var.vm_image
-  cpus   = each.value.vcpu
-  memory = "${each.value.memory} mib"
-
-  network_adapter {
-    type           = "hostonly"
-    host_interface = var.network_name
+  triggers = {
+    name         = each.value.hostname
+    image        = var.vm_image
+    cpus         = tostring(each.value.vcpu)
+    memory       = tostring(each.value.memory)
+    network_name = var.network_name
+    ssh_port     = tostring(local.ssh_forward_ports[each.key])
+    nic_layout   = "nat1-hostonly2-v1"
   }
 
-  network_adapter {
-    type = "nat"
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-c"]
+    command = "bash ${path.module}/scripts/vbox_vm_create.sh '${each.value.hostname}' '${var.vm_image}' '${each.value.vcpu}' '${each.value.memory}' '${var.network_name}' '${local.ssh_forward_ports[each.key]}'"
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    interpreter = ["/bin/bash", "-c"]
+    command = "bash ${path.module}/scripts/vbox_vm_destroy.sh '${self.triggers.name}'"
+  }
+}
+
+# -----------------------------------------------------------------------------
+# Wait for guest readiness via VirtualBox guestcontrol
+# -----------------------------------------------------------------------------
+
+resource "null_resource" "wait_for_ssh" {
+  for_each = var.vms
+
+  depends_on = [null_resource.virtualbox_vm]
+
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-c"]
+    command = "bash ${path.module}/scripts/wait_guestcontrol.sh '${each.value.hostname}' '${var.ssh_user}' '${var.ssh_password}'"
   }
 }
 
@@ -39,56 +72,11 @@ resource "virtualbox_vm" "vm" {
 resource "null_resource" "configure_vm" {
   for_each = var.vms
 
-  depends_on = [virtualbox_vm.vm]
+  depends_on = [null_resource.wait_for_ssh]
 
-  connection {
-    type     = "ssh"
-    user     = var.ssh_user
-    password = var.ssh_password
-    host     = each.value.ip_address
-    timeout  = "10m"
-  }
-
-  # Configure static IP address
-  provisioner "remote-exec" {
-    inline = [
-      "echo '${var.ssh_password}' | sudo -S bash -c 'cat > /etc/netplan/01-netcfg.yaml << EOF",
-      "network:",
-      "  version: 2",
-      "  ethernets:",
-      "    enp0s3:",
-      "      dhcp4: false",
-      "      addresses:",
-      "        - ${each.value.ip_address}/24",
-      "      routes:",
-      "        - to: default",
-      "          via: ${var.network_gateway}",
-      "      nameservers:",
-      "        addresses: [8.8.8.8, 8.8.4.4]",
-      "    enp0s8:",
-      "      dhcp4: true",
-      "EOF'",
-      "echo '${var.ssh_password}' | sudo -S netplan apply || true"
-    ]
-  }
-
-  # Add SSH public key
-  provisioner "remote-exec" {
-    inline = [
-      "mkdir -p ~/.ssh",
-      "chmod 700 ~/.ssh",
-      "echo '${trimspace(data.local_file.ssh_public_key.content)}' >> ~/.ssh/authorized_keys",
-      "chmod 600 ~/.ssh/authorized_keys",
-      "echo 'SSH key added successfully'"
-    ]
-  }
-
-  # Set hostname
-  provisioner "remote-exec" {
-    inline = [
-      "echo '${var.ssh_password}' | sudo -S hostnamectl set-hostname ${each.value.hostname}",
-      "echo '${var.ssh_password}' | sudo -S bash -c 'echo \"127.0.0.1 ${each.value.hostname}\" >> /etc/hosts'"
-    ]
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-c"]
+    command = "bash ${path.module}/scripts/configure_vm_guestcontrol.sh '${each.value.hostname}' '${var.ssh_user}' '${var.ssh_password}' '${each.value.hostname}' '${each.value.ip_address}' '${base64encode(trimspace(data.local_file.ssh_public_key.content))}'"
   }
 }
 
@@ -102,32 +90,8 @@ resource "null_resource" "wait_for_vm" {
   depends_on = [null_resource.configure_vm]
 
   provisioner "local-exec" {
-    command = <<-EOT
-      echo "Waiting for ${each.value.hostname} SSH key authentication..."
-      
-      max_attempts=30
-      attempt=0
-      
-      while [ $attempt -lt $max_attempts ]; do
-        attempt=$((attempt + 1))
-        
-        if ssh -o StrictHostKeyChecking=no \
-               -o UserKnownHostsFile=/dev/null \
-               -o ConnectTimeout=5 \
-               -o BatchMode=yes \
-               -i ${var.ssh_private_key_path} \
-               ${var.ssh_user}@${each.value.ip_address} 'echo ready' 2>/dev/null; then
-          echo "${each.value.hostname} is ready with SSH key auth!"
-          exit 0
-        fi
-        
-        echo "Attempt $attempt/$max_attempts: waiting..."
-        sleep 5
-      done
-      
-      echo "ERROR: Timeout waiting for ${each.value.hostname}"
-      exit 1
-    EOT
+    interpreter = ["/bin/bash", "-c"]
+    command = "bash ${path.module}/scripts/wait_guestcontrol.sh '${each.value.hostname}' '${var.ssh_user}' '${var.ssh_password}'"
   }
 }
 
@@ -141,7 +105,9 @@ resource "local_file" "ansible_inventory" {
   content = templatefile("${var.ansible_playbook_path}/templates/inventory.tpl", {
     haproxy_ip             = var.vms.haproxy.ip_address
     microservices_ip       = var.vms.microservices.ip_address
-    ssh_private_key        = var.ssh_private_key_path
+    haproxy_ssh_port       = local.ssh_forward_ports.haproxy
+    microservices_ssh_port = local.ssh_forward_ports.microservices
+    ssh_password           = var.ssh_password
     ssh_user               = var.ssh_user
     haproxy_stats_port     = var.haproxy_stats_port
     haproxy_stats_user     = var.haproxy_stats_user
@@ -172,17 +138,8 @@ resource "null_resource" "ansible_provision" {
     environment = {
       ANSIBLE_HOST_KEY_CHECKING = "False"
       ANSIBLE_FORCE_COLOR       = "true"
+      ANSIBLE_ROLES_PATH        = "${var.ansible_playbook_path}/roles"
     }
-    command = <<-EOT
-      echo "============================================"
-      echo "Running Ansible Playbooks"
-      echo "============================================"
-      
-      ansible-playbook \
-        -i inventory/hosts.yml \
-        playbooks/site.yml \
-        --private-key=${var.ssh_private_key_path} \
-        -v
-    EOT
+    command = "echo '============================================'; echo 'Running Ansible Playbooks'; echo '============================================'; ansible-playbook -i inventory/hosts.yml playbooks/site.yml -v"
   }
 }

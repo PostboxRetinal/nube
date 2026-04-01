@@ -14,7 +14,7 @@ output "network_info" {
 output "vm_haproxy" {
   description = "HAProxy VM details"
   value = {
-    name        = virtualbox_vm.vm["haproxy"].name
+    name        = var.vms.haproxy.hostname
     ip_address  = var.vms.haproxy.ip_address
     memory_mb   = var.vms.haproxy.memory
     vcpu        = var.vms.haproxy.vcpu
@@ -25,7 +25,7 @@ output "vm_haproxy" {
 output "vm_microservices" {
   description = "Microservices VM details"
   value = {
-    name        = virtualbox_vm.vm["microservices"].name
+    name        = var.vms.microservices.hostname
     ip_address  = var.vms.microservices.ip_address
     memory_mb   = var.vms.microservices.memory
     vcpu        = var.vms.microservices.vcpu

@@ -1,11 +1,12 @@
 .vagrant/
 ssh-keys/infra_key
 ssh-keys/infra_key.pub
+ansible/inventory/hosts.yml
 terraform/kvm-libvirt/.terraform/
 terraform/kvm-libvirt/.terraform.lock.hcl
 terraform/kvm-libvirt/tfplan
 terraform/virtualbox/.terraform
-terraform/virtualbox/.terraform.lock.hcl
+terraform/virtualbox/.terraform.*
 terraform/virtualbox/tfplan
 terraform/virtualbox/jammy-server-cloudimg-amd64.ova
-terraform/virtualbox/terraform.tfstate
+terraform/virtualbox/terraform.*
