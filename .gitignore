@@ -1,5 +1,6 @@
 .vagrant/
-ssh-keys/*
+ssh-keys/infra_key
+ssh-keys/infra_key.pub
 terraform/kvm-libvirt/.terraform/
 terraform/kvm-libvirt/.terraform.lock.hcl
 terraform/kvm-libvirt/tfplan
