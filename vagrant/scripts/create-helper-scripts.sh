@@ -6,7 +6,7 @@
 set -euo pipefail
 
 PROVIDER="${INFRA_PROVIDER:-libvirt}"
-CONTROL_IP="${CONTROL_NODE_IP:-192.168.56.10}"
+CONTROL_IP="${CONTROL_NODE_IP:-192.168.57.10}"
 
 echo "============================================"
 echo "Creating Helper Scripts"

@@ -13,14 +13,38 @@ VM_MEMORY           = 4096
 VM_CPUS             = 2
 
 # Network Configuration
-CONTROL_NODE_IP     = "192.168.56.10"
-NETWORK_ADAPTER     = "VirtualBox Host-Only Ethernet Adapter"
+CONTROL_NODE_IP     = "192.168.57.10"
 
 # Paths
 SCRIPTS_PATH        = "../scripts"
 PROJECT_ROOT        = "../.."
 
 Vagrant.configure("2") do |config|
+  config.trigger.after :up do |trigger|
+    trigger.name = "Auto-start nested VirtualBox VMs"
+    trigger.run_remote = {
+      inline: <<-SHELL
+        if ! command -v VBoxManage >/dev/null 2>&1; then
+          echo "VBoxManage not available yet, skipping nested VM autostart"
+          exit 0
+        fi
+
+        for vm in vm-haproxy vm-microservices; do
+          if VBoxManage showvminfo "$vm" >/dev/null 2>&1; then
+            if VBoxManage list runningvms | grep -q "\"$vm\""; then
+              echo "$vm already running"
+            else
+              echo "Starting $vm..."
+              VBoxManage startvm "$vm" --type headless || true
+            fi
+          else
+            echo "$vm not deployed yet (run ~/deploy-infrastructure.sh first)"
+          fi
+        done
+      SHELL
+    }
+  end
+
   config.vm.define VM_NAME do |node|
     # Base box configuration
     node.vm.box      = BOX_NAME
@@ -28,8 +52,7 @@ Vagrant.configure("2") do |config|
 
     # Network configuration for VirtualBox
     node.vm.network "private_network",
-      ip: CONTROL_NODE_IP,
-      name: NETWORK_ADAPTER
+      ip: CONTROL_NODE_IP
 
     # Synced folders using VirtualBox shared folders (Windows compatible)
     node.vm.synced_folder "#{PROJECT_ROOT}/terraform", "/home/vagrant/terraform"
@@ -106,6 +129,11 @@ Vagrant.configure("2") do |config|
         "INFRA_PROVIDER" => "virtualbox",
         "CONTROL_NODE_IP" => CONTROL_NODE_IP
       }
+
+    node.vm.provision "setup-nested-autostart",
+      type: "shell",
+      path: "#{SCRIPTS_PATH}/setup-nested-autostart.sh",
+      privileged: true
 
     # Final message
     node.vm.post_up_message = <<-MESSAGE
