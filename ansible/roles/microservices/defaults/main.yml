@@ -1,0 +1,7 @@
+# =============================================================================
+# Microservices Role - Default Variables
+# =============================================================================
+
+---
+docker_compose_dir: /opt/microservices
+docker_network_name: microservices-net

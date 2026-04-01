@@ -1,0 +1,55 @@
+# =============================================================================
+# HAProxy Role - Tasks
+# =============================================================================
+
+---
+- name: Install HAProxy
+  apt:
+    name: "{{ haproxy_package }}"
+    state: present
+    update_cache: true
+
+- name: Create HAProxy configuration directory
+  file:
+    path: /etc/haproxy
+    state: directory
+    mode: '0755'
+
+- name: Deploy HAProxy configuration
+  template:
+    src: haproxy.cfg.j2
+    dest: "{{ haproxy_config_file }}"
+    owner: root
+    group: root
+    mode: '0644'
+    validate: 'haproxy -c -f %s'
+  notify: Restart HAProxy
+
+- name: Ensure HAProxy errors directory exists
+  file:
+    path: /etc/haproxy/errors
+    state: directory
+    mode: '0755'
+
+- name: Enable HAProxy service
+  service:
+    name: "{{ haproxy_service }}"
+    enabled: true
+
+- name: Start HAProxy service
+  service:
+    name: "{{ haproxy_service }}"
+    state: started
+
+- name: Wait for HAProxy to be ready
+  wait_for:
+    port: "{{ haproxy_frontend_port }}"
+    delay: 2
+    timeout: 30
+
+- name: Wait for HAProxy stats to be ready
+  wait_for:
+    port: "{{ haproxy_stats_port }}"
+    delay: 2
+    timeout: 30
+  when: haproxy_stats_enabled

@@ -1,0 +1,74 @@
+# =============================================================================
+# Microservices Role - Tasks
+# =============================================================================
+
+---
+- name: Create microservices directory
+  file:
+    path: "{{ docker_compose_dir }}"
+    state: directory
+    mode: '0755'
+    owner: vagrant
+    group: vagrant
+
+- name: Create nginx configuration directory
+  file:
+    path: "{{ docker_compose_dir }}/nginx-conf"
+    state: directory
+    mode: '0755'
+    owner: vagrant
+    group: vagrant
+
+- name: Deploy nginx configuration for each service
+  template:
+    src: nginx-service.conf.j2
+    dest: "{{ docker_compose_dir }}/nginx-conf/{{ item.key }}.conf"
+    mode: '0644'
+  loop: "{{ microservices_config | dict2items }}"
+  vars:
+    service_name: "{{ item.key }}"
+    service_config: "{{ item.value }}"
+
+- name: Deploy Docker Compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ docker_compose_dir }}/docker-compose.yml"
+    mode: '0644'
+    owner: vagrant
+    group: vagrant
+  notify: Restart microservices
+
+- name: Create Docker network
+  docker_network:
+    name: "{{ docker_network_name }}"
+    state: present
+
+- name: Pull Docker images
+  docker_image:
+    name: "{{ item.value.image }}"
+    source: pull
+  loop: "{{ microservices_config | dict2items }}"
+
+- name: Start microservices with Docker Compose
+  community.docker.docker_compose_v2:
+    project_src: "{{ docker_compose_dir }}"
+    state: present
+  register: compose_output
+
+- name: Display Docker Compose output
+  debug:
+    var: compose_output
+  when: compose_output is defined
+
+- name: Wait for microservices to be healthy
+  wait_for:
+    port: "{{ item }}"
+    delay: 5
+    timeout: 60
+  loop:
+    - 3001
+    - 3002
+    - 3003
+    - 3011
+    - 3012
+    - 3013
