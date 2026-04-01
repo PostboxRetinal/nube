@@ -1,0 +1,5 @@
+.vagrant/
+ssh-keys/*
+terraform/kvm-libvirt/.terraform/
+terraform/kvm-libvirt/.terraform.lock.hcl
+terraform/kvm-libvirt/tfplan

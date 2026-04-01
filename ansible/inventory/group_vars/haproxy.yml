@@ -1,0 +1,108 @@
+# =============================================================================
+# HAProxy Group Variables
+# =============================================================================
+
+---
+# HAProxy Package
+haproxy_package: haproxy
+haproxy_service: haproxy
+
+# Frontend Configuration
+haproxy_frontend_name: "http_front"
+haproxy_frontend_port: 80
+haproxy_frontend_mode: "http"
+
+# Stats Dashboard Configuration
+haproxy_stats_enabled: true
+haproxy_stats_port: 8080
+haproxy_stats_uri: "/stats"
+haproxy_stats_user: "admin"
+haproxy_stats_password: "haproxy_admin_2024"
+haproxy_stats_refresh: "10s"
+haproxy_stats_realm: "HAProxy Statistics"
+
+# Global HAProxy Settings
+haproxy_global:
+  maxconn: 4096
+  log: "/dev/log local0"
+  chroot: "/var/lib/haproxy"
+  user: "haproxy"
+  group: "haproxy"
+  daemon: true
+
+# Default HAProxy Settings
+haproxy_defaults:
+  mode: "http"
+  log: "global"
+  option:
+    - "httplog"
+    - "dontlognull"
+    - "http-server-close"
+    - "forwardfor except 127.0.0.0/8"
+    - "redispatch"
+  retries: 3
+  timeout:
+    connect: "5000ms"
+    client: "50000ms"
+    server: "50000ms"
+  errorfile:
+    400: "/etc/haproxy/errors/400.http"
+    403: "/etc/haproxy/errors/403.http"
+    408: "/etc/haproxy/errors/408.http"
+    500: "/etc/haproxy/errors/500.http"
+    502: "/etc/haproxy/errors/502.http"
+    503: "/etc/haproxy/errors/503.http"
+    504: "/etc/haproxy/errors/504.http"
+
+# Backend Configuration
+haproxy_backends:
+  users:
+    name: "users_back"
+    path_prefix: "/api/users"
+    balance: "roundrobin"
+    options:
+      - "httpchk GET /health"
+    http_check: "expect status 200"
+    servers:
+      - name: "users1"
+        address: "{{ microservices_ip }}"
+        port: 3001
+        options: "check inter 5s fall 3 rise 2"
+      - name: "users2"
+        address: "{{ microservices_ip }}"
+        port: 3011
+        options: "check inter 5s fall 3 rise 2"
+
+  products:
+    name: "products_back"
+    path_prefix: "/api/products"
+    balance: "roundrobin"
+    options:
+      - "httpchk GET /health"
+    http_check: "expect status 200"
+    servers:
+      - name: "products1"
+        address: "{{ microservices_ip }}"
+        port: 3002
+        options: "check inter 5s fall 3 rise 2"
+      - name: "products2"
+        address: "{{ microservices_ip }}"
+        port: 3012
+        options: "check inter 5s fall 3 rise 2"
+
+  orders:
+    name: "orders_back"
+    path_prefix: "/api/orders"
+    balance: "roundrobin"
+    options:
+      - "httpchk GET /health"
+    http_check: "expect status 200"
+    servers:
+      - name: "orders1"
+        address: "{{ microservices_ip }}"
+        port: 3003
+        options: "check inter 5s fall 3 rise 2"
+      - name: "orders2"
+        address: "{{ microservices_ip }}"
+        port: 3013
+        options: "check inter 5s fall 3 rise 2"

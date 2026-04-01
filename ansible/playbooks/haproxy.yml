@@ -1,0 +1,52 @@
+# =============================================================================
+# HAProxy Playbook
+# =============================================================================
+
+---
+- name: Configure HAProxy Load Balancer
+  hosts: haproxy
+  gather_facts: true
+  become: true
+
+  pre_tasks:
+    - name: Wait for system to be ready
+      wait_for_connection:
+        timeout: 300
+
+    - name: Update apt cache
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+  roles:
+    - role: common
+      tags:
+        - common
+
+    - role: haproxy
+      tags:
+        - haproxy
+
+  post_tasks:
+    - name: Verify HAProxy is running
+      service:
+        name: haproxy
+        state: started
+      check_mode: true
+      register: haproxy_status
+      
+    - name: Display HAProxy status
+      debug:
+        msg: "HAProxy is {{ 'running' if haproxy_status.changed == false else 'not running' }}"
+
+    - name: Test HAProxy frontend
+      wait_for:
+        port: "{{ haproxy_frontend_port }}"
+        timeout: 30
+      ignore_errors: true
+
+    - name: Test HAProxy stats port
+      wait_for:
+        port: "{{ haproxy_stats_port }}"
+        timeout: 30
+      ignore_errors: true

@@ -1,0 +1,123 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# =============================================================================
+# Vagrantfile for Control Node - VirtualBox on Windows 11
+# =============================================================================
+
+# Configuration Constants
+BOX_NAME            = "generic/ubuntu2204"
+VM_NAME             = "control-node"
+VM_HOSTNAME         = "control-node"
+VM_MEMORY           = 2048
+VM_CPUS             = 2
+
+# Network Configuration
+CONTROL_NODE_IP     = "192.168.56.10"
+NETWORK_ADAPTER     = "VirtualBox Host-Only Ethernet Adapter"
+
+# Paths
+SCRIPTS_PATH        = "../scripts"
+PROJECT_ROOT        = "../.."
+
+Vagrant.configure("2") do |config|
+  config.vm.define VM_NAME do |node|
+    # Base box configuration
+    node.vm.box      = BOX_NAME
+    node.vm.hostname = VM_HOSTNAME
+
+    # Network configuration for VirtualBox
+    node.vm.network "private_network",
+      ip: CONTROL_NODE_IP,
+      name: NETWORK_ADAPTER
+
+    # Synced folders using VirtualBox shared folders (Windows compatible)
+    node.vm.synced_folder "#{PROJECT_ROOT}/terraform", "/home/vagrant/terraform"
+    node.vm.synced_folder "#{PROJECT_ROOT}/ansible", "/home/vagrant/ansible"
+    node.vm.synced_folder "#{PROJECT_ROOT}/ssh-keys", "/home/vagrant/ssh-keys"
+
+    # VirtualBox provider configuration
+    node.vm.provider "virtualbox" do |vb|
+      vb.name   = VM_NAME
+      vb.memory = VM_MEMORY
+      vb.cpus   = VM_CPUS
+
+      # Performance optimizations
+      vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+      vb.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
+      vb.customize ["modifyvm", :id, "--ioapic", "on"]
+      vb.customize ["modifyvm", :id, "--paravirtprovider", "kvm"]
+      
+      # Network adapter optimizations
+      vb.customize ["modifyvm", :id, "--nictype1", "virtio"]
+      vb.customize ["modifyvm", :id, "--nictype2", "virtio"]
+      
+      # Disable audio
+      vb.customize ["modifyvm", :id, "--audio", "none"]
+      
+      # Disable USB
+      vb.customize ["modifyvm", :id, "--usb", "off"]
+      vb.customize ["modifyvm", :id, "--usbehci", "off"]
+    end
+
+    # Provisioning scripts (executed in order)
+    node.vm.provision "generate-ssh-keys",
+      type: "shell",
+      path: "#{SCRIPTS_PATH}/generate-ssh-keys.sh",
+      privileged: false
+
+    node.vm.provision "install-packages",
+      type: "shell",
+      path: "#{SCRIPTS_PATH}/install-packages.sh",
+      privileged: true
+
+    node.vm.provision "install-terraform",
+      type: "shell",
+      path: "#{SCRIPTS_PATH}/install-terraform.sh",
+      privileged: true
+
+    node.vm.provision "install-ansible",
+      type: "shell",
+      path: "#{SCRIPTS_PATH}/install-ansible.sh",
+      privileged: true
+
+    node.vm.provision "setup-terraform-providers",
+      type: "shell",
+      path: "#{SCRIPTS_PATH}/setup-terraform-providers.sh",
+      privileged: false,
+      env: {
+        "INFRA_PROVIDER" => "virtualbox"
+      }
+
+    node.vm.provision "configure-ansible",
+      type: "shell",
+      path: "#{SCRIPTS_PATH}/configure-ansible.sh",
+      privileged: true
+
+    node.vm.provision "create-helper-scripts",
+      type: "shell",
+      path: "#{SCRIPTS_PATH}/create-helper-scripts.sh",
+      privileged: false,
+      env: {
+        "INFRA_PROVIDER" => "virtualbox",
+        "CONTROL_NODE_IP" => CONTROL_NODE_IP
+      }
+
+    # Final message
+    node.vm.post_up_message = <<-MESSAGE
+    ============================================
+    Control Node (VirtualBox) Ready!
+    ============================================
+    
+    IP Address: #{CONTROL_NODE_IP}
+    Provider:   VirtualBox
+    
+    To deploy infrastructure:
+      vagrant ssh
+      cd ~
+      ./deploy-infrastructure.sh
+    
+    ============================================
+    MESSAGE
+  end
+end
