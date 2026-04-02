@@ -11,7 +11,15 @@ resource "null_resource" "wait_for_vm" {
 
   depends_on = [libvirt_domain.vm]
 
+  triggers = {
+    always_run = timestamp()
+    vm_id      = libvirt_domain.vm[each.key].id
+    vm_ip      = each.value.ip_address
+  }
+
   provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-c"]
+
     command = <<-EOT
       echo "Waiting for ${each.value.hostname} (${each.value.ip_address}) to be ready..."
       
