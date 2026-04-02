@@ -7,7 +7,7 @@ set -euo pipefail
 
 PROVIDER="${INFRA_PROVIDER:-libvirt}"
 CONTROL_IP="${CONTROL_NODE_IP:-192.168.57.10}"
-
+NETWORK_NAME="${NETWORK_NAME:-infrastructure-net}"
 echo "============================================"
 echo "Creating Helper Scripts"
 echo "============================================"
@@ -33,6 +33,34 @@ echo "Terraform Directory: \${TERRAFORM_DIR}"
 echo "============================================"
 
 cd "\${TERRAFORM_DIR}"
+
+if [[ "\${PROVIDER}" == "libvirt" ]]; then
+    echo ""
+    echo ">>> Validating libvirt service..."
+    if ! systemctl is-active --quiet libvirtd; then
+        echo ">>> libvirtd is not active; trying to start it..."
+        sudo systemctl enable --now libvirtd
+    fi
+    if ! systemctl is-active --quiet libvirtd; then
+        echo "ERROR: libvirtd service is not active; cannot proceed with Terraform libvirt provider."
+        systemctl status libvirtd --no-pager || true
+        exit 1
+    fi
+    echo ">>> Validating libvirt storage pool 'default'..."
+    if ! virsh pool-list --all | awk '{print \$1}' | grep -q "^default$"; then
+        echo ">>> Defining libvirt pool 'default'..."
+        sudo virsh pool-define-as default dir --target /var/lib/libvirt/images
+        sudo virsh pool-autostart default
+        sudo virsh pool-start default
+    fi
+
+    echo ">>> Validating libvirt network '${NETWORK_NAME}'..."
+    if virsh net-list --all | awk '{print \$1}' | grep -q "^${NETWORK_NAME}$"; then
+        echo ">>> Network '${NETWORK_NAME}' already defined; skipping creation."
+    else
+        echo ">>> Network '${NETWORK_NAME}' not found; will be created by Terraform if needed."
+    fi
+fi
 
 if [[ "\${PROVIDER}" == "virtualbox" ]]; then
     echo ""

@@ -15,6 +15,7 @@ all:
     network_prefix: "192.168.56"
     control_node_ip: "192.168.56.10"
     haproxy_ip: "${haproxy_ip}"
+    haproxy_ssh_port: "${haproxy_ssh_port}"
     microservices_ip: "${microservices_ip}"
     
     # HAProxy Configuration

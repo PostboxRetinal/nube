@@ -2,9 +2,16 @@
 ssh-keys/infra_key
 ssh-keys/infra_key.pub
 ansible/inventory/hosts.yml
+
+#libvirt files
 terraform/kvm-libvirt/.terraform/
 terraform/kvm-libvirt/.terraform.lock.hcl
+terraform/kvm-libvirt/.terraform.tfstate.lock.info
 terraform/kvm-libvirt/tfplan
+terraform/kvm-libvirt/terraform.tfstate
+terraform/kvm-libvirt/terraform.tfstate.backup
+
+#vbox files
 terraform/virtualbox/.terraform
 terraform/virtualbox/.terraform.*
 terraform/virtualbox/tfplan

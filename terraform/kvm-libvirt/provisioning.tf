@@ -50,9 +50,12 @@ resource "local_file" "ansible_inventory" {
 
   content = templatefile("${var.ansible_playbook_path}/templates/inventory.tpl", {
     haproxy_ip             = var.vms.haproxy.ip_address
+    haproxy_ssh_port       = var.vms.haproxy.ssh_port
     microservices_ip       = var.vms.microservices.ip_address
+    microservices_ssh_port = var.vms.microservices.ssh_port
     ssh_private_key        = var.ssh_private_key_path
     ssh_user               = var.ssh_user
+    ssh_password           = var.ssh_password
     haproxy_stats_port     = var.haproxy_stats_port
     haproxy_stats_user     = var.haproxy_stats_user
     haproxy_stats_password = var.haproxy_stats_password

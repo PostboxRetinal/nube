@@ -37,7 +37,47 @@ apt-get install -y -qq \
     iputils-ping \
     dnsutils \
     vim \
-    htop
+    genisoimage
+
+# KVM/Libvirt provider requires libvirt and qemu packages.
+if [[ "${PROVIDER}" == "libvirt" ]]; then
+    echo "Installing Libvirt/KVM packages for nested VM provisioning..."
+
+    libvirt_install_ok=0
+    for attempt in 1 2 3; do
+        echo "Libvirt install attempt ${attempt}/3..."
+        apt-get update -qq || true
+        if apt-get install -y -qq --fix-missing libvirt-daemon-system libvirt-clients qemu-kvm; then
+            libvirt_install_ok=1
+            break
+        fi
+        sleep 5
+    done
+
+    if [[ "${libvirt_install_ok}" -ne 1 ]]; then
+        echo "ERROR: Could not install libvirt packages after 3 attempts"
+        exit 1
+    fi
+
+    # Ensure the vagrant user can access libvirt management.
+    usermod -aG libvirt vagrant || true
+
+    echo "Enabling and starting libvirt service..."
+    systemctl enable --now libvirtd
+    if ! systemctl is-active --quiet libvirtd; then
+        echo "ERROR: libvirtd service is not active"
+        systemctl status libvirtd --no-pager
+        exit 1
+    fi
+
+    echo "Validating virsh..."
+    if command -v virsh >/dev/null 2>&1; then
+        virsh --version
+    else
+        echo "ERROR: virsh not found after installation"
+        exit 1
+    fi
+fi
 
 # VirtualBox provider requires VBoxManage available where Terraform runs.
 if [[ "${PROVIDER}" == "virtualbox" ]]; then

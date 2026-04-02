@@ -31,13 +31,13 @@ variable "network_name" {
 variable "network_cidr" {
   description = "CIDR block for the infrastructure network"
   type        = string
-  default     = "192.168.56.0/24"
+  default     = "192.168.123.0/24"
 }
 
 variable "network_gateway" {
   description = "Gateway IP for the network"
   type        = string
-  default     = "192.168.56.1"
+  default     = "192.168.123.1"
 }
 
 # -----------------------------------------------------------------------------
@@ -71,7 +71,11 @@ variable "ssh_user" {
   type        = string
   default     = "vagrant"
 }
-
+variable "ssh_password" {
+  description = "SSH password for password-based authentication (if required)"
+  type        = string
+  default     = ""
+}
 # -----------------------------------------------------------------------------
 # Ansible Configuration
 # -----------------------------------------------------------------------------
@@ -91,6 +95,7 @@ variable "vms" {
   type = map(object({
     hostname   = string
     ip_address = string
+    ssh_port   = number
     memory     = number
     vcpu       = number
     disk_size  = number
@@ -99,7 +104,8 @@ variable "vms" {
   default = {
     haproxy = {
       hostname   = "vm-haproxy"
-      ip_address = "192.168.56.20"
+      ip_address = "192.168.123.20"
+      ssh_port   = 22
       memory     = 1024
       vcpu       = 1
       disk_size  = 10737418240 # 10GB
@@ -107,7 +113,8 @@ variable "vms" {
     }
     microservices = {
       hostname   = "vm-microservices"
-      ip_address = "192.168.56.30"
+      ip_address = "192.168.123.30"
+      ssh_port   = 22
       memory     = 2048
       vcpu       = 2
       disk_size  = 21474836480 # 20GB
