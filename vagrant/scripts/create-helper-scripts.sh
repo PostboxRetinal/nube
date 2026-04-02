@@ -13,28 +13,29 @@ echo "Creating Helper Scripts"
 echo "============================================"
 
 # Create infrastructure deployment script
-cat > "${HOME}/deploy-infrastructure.sh" << SCRIPT
+cat > "${HOME}/deploy-infrastructure.sh" << 'SCRIPT'
 #!/bin/bash
 set -e
 
-PROVIDER="\${INFRA_PROVIDER:-${PROVIDER}}"
+PROVIDER="${INFRA_PROVIDER:-libvirt}"
+NETWORK_NAME="${NETWORK_NAME:-infrastructure-net}"
 
 # Map provider names for terraform directory
-if [[ "\${PROVIDER}" == "libvirt" ]]; then
+if [[ "${PROVIDER}" == "libvirt" ]]; then
     TERRAFORM_DIR="/home/vagrant/terraform/kvm-libvirt"
 else
-    TERRAFORM_DIR="/home/vagrant/terraform/\${PROVIDER}"
+    TERRAFORM_DIR="/home/vagrant/terraform/${PROVIDER}"
 fi
 
 echo "============================================"
 echo "Deploying Infrastructure"
-echo "Provider: \${PROVIDER}"
-echo "Terraform Directory: \${TERRAFORM_DIR}"
+echo "Provider: ${PROVIDER}"
+echo "Terraform Directory: ${TERRAFORM_DIR}"
 echo "============================================"
 
-cd "\${TERRAFORM_DIR}"
+cd "${TERRAFORM_DIR}"
 
-if [[ "\${PROVIDER}" == "libvirt" ]]; then
+if [[ "${PROVIDER}" == "libvirt" ]]; then
     echo ""
     echo ">>> Validating libvirt service..."
     if ! systemctl is-active --quiet libvirtd; then
@@ -46,23 +47,95 @@ if [[ "\${PROVIDER}" == "libvirt" ]]; then
         systemctl status libvirtd --no-pager || true
         exit 1
     fi
+
+    echo ">>> Applying nested-libvirt qemu access hardening..."
+    QEMU_CONF="/etc/libvirt/qemu.conf"
+    LIBVIRT_RESTART_REQUIRED=0
+
+    set_qemu_conf_value() {
+        local key="$1"
+        local value="$2"
+        local escaped_value
+        escaped_value="$(printf '%s' "${value}" | sed 's/[&/]/\\&/g')"
+
+        if sudo grep -Eq "^[#[:space:]]*${key}[[:space:]]*=" "${QEMU_CONF}"; then
+            current_value="$(sudo awk -F'= *' -v k="${key}" '$0 ~ "^[#[:space:]]*"k"[[:space:]]*=" {print $2; exit}' "${QEMU_CONF}" | xargs || true)"
+            if [[ "${current_value}" != "${value}" ]]; then
+                sudo sed -i -E "s|^[#[:space:]]*${key}[[:space:]]*=.*|${key} = ${escaped_value}|" "${QEMU_CONF}"
+                LIBVIRT_RESTART_REQUIRED=1
+            fi
+        else
+            echo "${key} = ${value}" | sudo tee -a "${QEMU_CONF}" >/dev/null
+            LIBVIRT_RESTART_REQUIRED=1
+        fi
+    }
+
+    set_qemu_conf_value "user" '"root"'
+    set_qemu_conf_value "group" '"root"'
+    set_qemu_conf_value "dynamic_ownership" "0"
+    set_qemu_conf_value "security_driver" '"none"'
+
+    if [[ "${LIBVIRT_RESTART_REQUIRED}" -eq 1 ]]; then
+        echo ">>> Restarting libvirtd to apply qemu.conf changes..."
+        sudo systemctl restart libvirtd
+    fi
+
+    VIRSH_CMD="sudo virsh -c qemu:///system"
+    ensure_pool_active() {
+        local pool_name="$1"
+        local pool_state
+        pool_state="$(${VIRSH_CMD} pool-info "${pool_name}" 2>/dev/null | awk -F': *' '/^State/ {print $2}' || true)"
+
+        ${VIRSH_CMD} pool-autostart "${pool_name}" || true
+        if [[ "${pool_state}" != "running" ]]; then
+            ${VIRSH_CMD} pool-start "${pool_name}" || true
+        fi
+    }
+
     echo ">>> Validating libvirt storage pool 'default'..."
-    if ! virsh pool-list --all | awk '{print \$1}' | grep -q "^default$"; then
+    if ! ${VIRSH_CMD} pool-list --all | awk '{print $1}' | grep -q "^default$"; then
         echo ">>> Defining libvirt pool 'default'..."
-        sudo virsh pool-define-as default dir --target /var/lib/libvirt/images
-        sudo virsh pool-autostart default
-        sudo virsh pool-start default
+        if ! ${VIRSH_CMD} pool-define-as default dir --target /var/lib/libvirt/images; then
+            echo ">>> libvirt pool 'default' already defined or failed. Continuing."
+        fi
+        ensure_pool_active default
+    else
+        echo ">>> libvirt pool 'default' already exists; ensuring running"
+        ensure_pool_active default
     fi
 
     echo ">>> Validating libvirt network '${NETWORK_NAME}'..."
-    if virsh net-list --all | awk '{print \$1}' | grep -q "^${NETWORK_NAME}$"; then
+    if ${VIRSH_CMD} net-list --all | awk '{print $1}' | grep -q "^${NETWORK_NAME}$"; then
         echo ">>> Network '${NETWORK_NAME}' already defined; skipping creation."
     else
-        echo ">>> Network '${NETWORK_NAME}' not found; will be created by Terraform if needed."
+        echo ">>> Network '${NETWORK_NAME}' not found; creating now ..."
+        # create network only if not existing; Terraform will own it if provided in network.tf
     fi
+
+    cleanup_existing_domains() {
+        local domains_to_remove=()
+        for domain in vm-haproxy vm-microservices; do
+            if sudo virsh -c qemu:///system domstate "${domain}" >/dev/null 2>&1; then
+                domains_to_remove+=("${domain}")
+            fi
+        done
+
+        if [[ ":${domains_to_remove[*]}:" != ":" ]]; then
+            echo "Detected existing libvirt domains: ${domains_to_remove[*]}"
+            for domain in "${domains_to_remove[@]}"; do
+                echo "Destroying and undefining existing domain (preserving disks): ${domain}"
+                sudo virsh -c qemu:///system destroy "${domain}" >/dev/null 2>&1 || true
+                sudo virsh -c qemu:///system undefine "${domain}" >/dev/null 2>&1 || true
+            done
+            echo "Cleaned existing domains."
+        fi
+    }
+
+    echo ">>> Cleaning any stale libvirt domains before planning..."
+    cleanup_existing_domains
 fi
 
-if [[ "\${PROVIDER}" == "virtualbox" ]]; then
+if [[ "${PROVIDER}" == "virtualbox" ]]; then
     echo ""
     echo ">>> Validating VirtualBox host-only network..."
 
@@ -83,11 +156,11 @@ if [[ "\${PROVIDER}" == "virtualbox" ]]; then
         exit 1
     fi
 
-    HOSTONLY_IFACE="\$(VBoxManage list hostonlyifs | awk -F: '/^Name:/ {gsub(/^[ \t]+/, "", \$2); print \$2; exit}')"
+    HOSTONLY_IFACE="$(VBoxManage list hostonlyifs | awk -F: '/^Name:/ {gsub(/^[ \t]+/, "", $2); print $2; exit}')"
 
-    if [[ -z "\${HOSTONLY_IFACE}" ]]; then
-        CREATE_OUTPUT="\$(VBoxManage hostonlyif create)"
-        HOSTONLY_IFACE="\$(echo "\${CREATE_OUTPUT}" | sed -n "s/.*'\([^']*\)'.*/\1/p")"
+    if [[ -z "${HOSTONLY_IFACE}" ]]; then
+        CREATE_OUTPUT="$(VBoxManage hostonlyif create)"
+        HOSTONLY_IFACE="$(echo "${CREATE_OUTPUT}" | awk -F"'" '{print $2}')"
     fi
 
     if [[ -z "\${HOSTONLY_IFACE}" ]]; then
@@ -118,6 +191,14 @@ fi
 
 echo ""
 echo ">>> Applying infrastructure..."
+
+# Guard against duplicate domain creation for libvirt.
+# If domains already exist, undefine them and continue.
+if [[ "${PROVIDER}" == "libvirt" ]]; then
+    cleanup_existing_domains
+    echo "Continuing terraform apply."
+fi
+
 if [[ "\${PROVIDER}" == "virtualbox" ]]; then
     terraform apply -parallelism=1 -auto-approve tfplan
 else

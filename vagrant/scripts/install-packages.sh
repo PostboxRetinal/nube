@@ -37,7 +37,8 @@ apt-get install -y -qq \
     iputils-ping \
     dnsutils \
     vim \
-    genisoimage
+    genisoimage \
+    apparmor-utils
 
 # KVM/Libvirt provider requires libvirt and qemu packages.
 if [[ "${PROVIDER}" == "libvirt" ]]; then

@@ -38,11 +38,11 @@ all:
     haproxy:
       hosts:
         vm-haproxy:
-          ansible_host: 127.0.0.1
+          ansible_host: ${haproxy_ip}
           ansible_port: ${haproxy_ssh_port}
           
     microservices:
       hosts:
         vm-microservices:
-          ansible_host: 127.0.0.1
+          ansible_host: ${microservices_ip}
           ansible_port: ${microservices_ssh_port}
