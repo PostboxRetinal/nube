@@ -77,6 +77,20 @@ if [[ "${PROVIDER}" == "libvirt" ]]; then
         echo "ERROR: virsh not found after installation"
         exit 1
     fi
+
+    # Fix libvirt image permissions for qemu/kvm access.
+    LIBVIRT_IMAGE_DIR="/var/lib/libvirt/images"
+    if [[ -d "${LIBVIRT_IMAGE_DIR}" ]]; then
+        echo "Setting ownership and mode for ${LIBVIRT_IMAGE_DIR}..."
+        chown -R libvirt-qemu:kvm "${LIBVIRT_IMAGE_DIR}" || chown -R qemu:qemu "${LIBVIRT_IMAGE_DIR}" || true
+        find "${LIBVIRT_IMAGE_DIR}" -type d -exec chmod 0755 {} +
+        find "${LIBVIRT_IMAGE_DIR}" -type f -exec chmod 0644 {} +
+        if command -v restorecon >/dev/null 2>&1; then
+            restorecon -Rv "${LIBVIRT_IMAGE_DIR}" || true
+        fi
+    else
+        echo "Warning: ${LIBVIRT_IMAGE_DIR} does not exist yet; will validate later." 
+    fi
 fi
 
 # VirtualBox provider requires VBoxManage available where Terraform runs.
