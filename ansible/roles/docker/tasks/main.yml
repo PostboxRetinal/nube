@@ -12,6 +12,7 @@
       - containerd
       - runc
     state: absent
+    lock_timeout: 300
 
 - name: Install Docker prerequisites
   apt:
@@ -23,6 +24,7 @@
       - lsb-release
     state: present
     update_cache: true
+    lock_timeout: 300
 
 - name: Create keyrings directory
   file:
@@ -46,17 +48,20 @@
 - name: Update apt cache after adding Docker repo
   apt:
     update_cache: true
+    lock_timeout: 300
 
 - name: Install Docker packages
   apt:
     name: "{{ docker_packages }}"
     state: present
+    lock_timeout: 300
 
 - name: Install Python dependencies for Ansible Docker modules
   apt:
     name:
       - python3-requests
     state: present
+    lock_timeout: 300
 
 - name: Ensure Docker service is started and enabled
   service:

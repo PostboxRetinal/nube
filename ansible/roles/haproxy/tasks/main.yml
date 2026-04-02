@@ -8,6 +8,7 @@
     name: "{{ haproxy_package }}"
     state: present
     update_cache: true
+    lock_timeout: 300
 
 - name: Create HAProxy configuration directory
   file:
