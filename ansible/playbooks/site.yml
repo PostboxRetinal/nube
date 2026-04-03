@@ -97,14 +97,20 @@
       uri:
         url: "http://localhost/api/{{ item }}/"
         method: GET
-        status_code:
-          - 200
-          - 503
+        status_code: 200
+        return_content: true
+      register: site_route_checks
       loop:
         - users
         - products
         - orders
-      ignore_errors: true
+
+    - name: Assert each API route returns expected service payload
+      assert:
+        that:
+          - "(item.content | from_json).service == item.item"
+        fail_msg: "Route /api/{{ item.item }}/ did not return expected service"
+      loop: "{{ site_route_checks.results }}"
       tags:
         - verify
         - never

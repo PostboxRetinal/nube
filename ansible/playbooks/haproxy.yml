@@ -50,3 +50,46 @@
         port: "{{ haproxy_stats_port }}"
         timeout: 30
       ignore_errors: true
+
+    - name: Verify stats endpoint rejects unauthenticated access
+      uri:
+        url: "http://localhost:{{ haproxy_stats_port }}{{ haproxy_stats_uri }}"
+        method: GET
+        status_code: 401
+      when: haproxy_stats_enabled
+
+    - name: Verify stats endpoint accepts authenticated access
+      uri:
+        url: "http://localhost:{{ haproxy_stats_port }}{{ haproxy_stats_uri }}"
+        method: GET
+        url_username: "{{ haproxy_stats_user }}"
+        url_password: "{{ haproxy_stats_password }}"
+        force_basic_auth: true
+        status_code: 200
+        return_content: true
+      register: haproxy_stats_page
+      when: haproxy_stats_enabled
+
+    - name: Verify backend names are visible in HAProxy stats page
+      assert:
+        that:
+          - "haproxy_stats_page.content is search(item.value.name)"
+        fail_msg: "Backend {{ item.value.name }} was not found in HAProxy stats page"
+      loop: "{{ haproxy_backends | dict2items }}"
+      when: haproxy_stats_enabled
+
+    - name: Verify API routing through HAProxy frontend
+      uri:
+        url: "http://localhost/api/{{ item.key }}/"
+        method: GET
+        status_code: 200
+        return_content: true
+      register: haproxy_route_check
+      loop: "{{ haproxy_backends | dict2items }}"
+
+    - name: Assert route response matches expected backend service
+      assert:
+        that:
+          - "(item.content | from_json).service == item.item.key"
+        fail_msg: "Route /api/{{ item.item.key }}/ did not return expected service"
+      loop: "{{ haproxy_route_check.results }}"

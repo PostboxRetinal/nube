@@ -8,9 +8,26 @@ set -euo pipefail
 PROVIDER="${INFRA_PROVIDER:-libvirt}"
 CONTROL_IP="${CONTROL_NODE_IP:-192.168.57.10}"
 NETWORK_NAME="${NETWORK_NAME:-infrastructure-net}"
+
+if [[ "${PROVIDER}" == "libvirt" ]]; then
+    DEFAULT_HAPROXY_IP="192.168.123.20"
+    DEFAULT_MICROSERVICES_IP="192.168.123.30"
+else
+    DEFAULT_HAPROXY_IP="192.168.56.20"
+    DEFAULT_MICROSERVICES_IP="192.168.56.30"
+fi
+
+HAPROXY_IP="${HAPROXY_IP:-${DEFAULT_HAPROXY_IP}}"
+MICROSERVICES_IP="${MICROSERVICES_IP:-${DEFAULT_MICROSERVICES_IP}}"
 echo "============================================"
 echo "Creating Helper Scripts"
 echo "============================================"
+
+# QoL: avoid clear/terminal issues when host uses kitty terminfo
+if ! grep -q 'export TERM=xterm-256color' "${HOME}/.bashrc" 2>/dev/null; then
+    echo 'export TERM=xterm-256color' >> "${HOME}/.bashrc"
+fi
+export TERM=xterm-256color
 
 # Create infrastructure deployment script
 cat > "${HOME}/deploy-infrastructure.sh" << 'SCRIPT'
@@ -249,6 +266,10 @@ cat > "${HOME}/check-status.sh" << SCRIPT
 #!/bin/bash
 
 PROVIDER="\${INFRA_PROVIDER:-${PROVIDER}}"
+HAPROXY_IP="\${HAPROXY_IP:-${HAPROXY_IP}}"
+MICROSERVICES_IP="\${MICROSERVICES_IP:-${MICROSERVICES_IP}}"
+HAPROXY_STATS_USER="\${HAPROXY_STATS_USER:-admin}"
+HAPROXY_STATS_PASSWORD="\${HAPROXY_STATS_PASSWORD:-haproxy_admin_2024}"
 
 echo "============================================"
 echo "Infrastructure Status Check"
@@ -275,7 +296,7 @@ fi
 # Check VM connectivity
 echo ""
 echo "VM Connectivity:"
-for vm in "192.168.56.20:vm-haproxy" "192.168.56.30:vm-microservices"; do
+for vm in "\${HAPROXY_IP}:vm-haproxy" "\${MICROSERVICES_IP}:vm-microservices"; do
     ip=\${vm%%:*}
     name=\${vm##*:}
     if ping -c 1 -W 2 \${ip} &>/dev/null; then
@@ -288,18 +309,25 @@ done
 # Test HAProxy
 echo ""
 echo "HAProxy Status:"
-http_code=\$(curl -s -o /dev/null -w "%{http_code}" http://192.168.56.20:80 2>/dev/null || echo "000")
+http_code=\$(curl -s -o /dev/null -w "%{http_code}" "http://\${HAPROXY_IP}:80" 2>/dev/null || echo "000")
 if [[ "\${http_code}" != "000" ]]; then
     echo "  Port 80: LISTENING (HTTP \${http_code})"
 else
     echo "  Port 80: NOT RESPONDING"
 fi
 
-stats_code=\$(curl -s -o /dev/null -w "%{http_code}" http://192.168.56.20:8080/stats 2>/dev/null || echo "000")
+stats_code=\$(curl -s -o /dev/null -w "%{http_code}" "http://\${HAPROXY_IP}:8080/stats" 2>/dev/null || echo "000")
 if [[ "\${stats_code}" != "000" ]]; then
     echo "  Port 8080 (Stats): LISTENING (HTTP \${stats_code})"
 else
     echo "  Port 8080 (Stats): NOT RESPONDING"
+fi
+
+stats_auth_code=\$(curl -s -u "\${HAPROXY_STATS_USER}:\${HAPROXY_STATS_PASSWORD}" -o /dev/null -w "%{http_code}" "http://\${HAPROXY_IP}:8080/stats" 2>/dev/null || echo "000")
+if [[ "\${stats_auth_code}" == "200" ]]; then
+    echo "  Stats auth: OK"
+else
+    echo "  Stats auth: FAILED (HTTP \${stats_auth_code})"
 fi
 
 echo ""
@@ -311,7 +339,7 @@ chmod +x "${HOME}/check-status.sh"
 cat > "${HOME}/test-endpoints.sh" << SCRIPT
 #!/bin/bash
 
-HAPROXY_IP="192.168.56.20"
+HAPROXY_IP="\${HAPROXY_IP:-${HAPROXY_IP}}"
 
 echo "============================================"
 echo "Testing HAProxy Endpoints"
@@ -338,11 +366,159 @@ echo "============================================"
 SCRIPT
 chmod +x "${HOME}/test-endpoints.sh"
 
+# Create round-robin validation script
+cat > "${HOME}/test-roundrobin.sh" << SCRIPT
+#!/bin/bash
+set -euo pipefail
+
+HAPROXY_IP="\${HAPROXY_IP:-${HAPROXY_IP}}"
+REQUESTS="\${REQUESTS:-12}"
+
+if ! command -v jq >/dev/null 2>&1; then
+    echo "ERROR: jq is required for this test."
+    exit 1
+fi
+
+echo "============================================"
+echo "Testing HAProxy Round-Robin Distribution"
+echo "Target: \${HAPROXY_IP} | Requests per service: \${REQUESTS}"
+echo "============================================"
+
+for service in users products orders; do
+    echo ""
+    echo ">>> /api/\${service}/"
+
+    declare -A hits=()
+    for i in \$(seq 1 "\${REQUESTS}"); do
+        body=\$(curl -s "http://\${HAPROXY_IP}/api/\${service}/")
+        server=\$(echo "\${body}" | jq -r '.server // "unknown"')
+        current=\${hits[\$server]:-0}
+        hits[\$server]=\$((current + 1))
+    done
+
+    uniq_count=0
+    for k in "\${!hits[@]}"; do
+        uniq_count=\$((uniq_count + 1))
+        echo "  \${k}: \${hits[\$k]} requests"
+    done
+
+    if [[ "\${uniq_count}" -lt 2 ]]; then
+        echo "  RESULT: FAIL (traffic did not reach at least 2 backend instances)"
+        exit 1
+    else
+        echo "  RESULT: PASS"
+    fi
+done
+
+echo ""
+echo "Round-robin test completed successfully."
+SCRIPT
+chmod +x "${HOME}/test-roundrobin.sh"
+
+# Create failover demonstration script
+cat > "${HOME}/test-failover.sh" << SCRIPT
+#!/bin/bash
+set -euo pipefail
+
+HAPROXY_IP="\${HAPROXY_IP:-${HAPROXY_IP}}"
+MICROSERVICES_IP="\${MICROSERVICES_IP:-${MICROSERVICES_IP}}"
+SERVICE="\${SERVICE:-users}"
+INSTANCE_DOWN="\${INSTANCE_DOWN:-users-service-1}"
+RECOVER="\${RECOVER:-true}"
+SSH_USER="\${SSH_USER:-vagrant}"
+SSH_KEY="\${SSH_KEY:-/home/vagrant/.ssh/infra_key}"
+SSH_OPTS="-o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+
+if [[ -f "\${SSH_KEY}" ]]; then
+    SSH_CMD=(ssh -i "\${SSH_KEY}" \${SSH_OPTS} "\${SSH_USER}@\${MICROSERVICES_IP}")
+else
+    SSH_CMD=(ssh \${SSH_OPTS} "\${SSH_USER}@\${MICROSERVICES_IP}")
+fi
+
+stats_csv() {
+    curl -s -u "admin:haproxy_admin_2024" "http://\${HAPROXY_IP}:8080/stats;csv"
+}
+
+print_backend_state() {
+    local backend_name="\$1"
+    echo "\$(stats_csv | awk -F, -v b="\${backend_name}" '\$1==b && \$2!="BACKEND" {print "  " \$2 ": " \$18}')"
+}
+
+echo "============================================"
+echo "Testing HAProxy Failover"
+echo "Service: \${SERVICE} | Stop instance: \${INSTANCE_DOWN}"
+echo "============================================"
+
+case "\${SERVICE}" in
+  users) backend="users_back"; path="users" ;;
+  products) backend="products_back"; path="products" ;;
+  orders) backend="orders_back"; path="orders" ;;
+  *) echo "Invalid SERVICE. Use users|products|orders"; exit 1 ;;
+esac
+
+echo ""
+echo ">>> Initial backend states"
+print_backend_state "\${backend}"
+
+echo ""
+echo ">>> Stopping \${INSTANCE_DOWN} on \${MICROSERVICES_IP}"
+"\${SSH_CMD[@]}" "docker stop \${INSTANCE_DOWN}" >/dev/null
+
+echo "Waiting for HAProxy health-check detection..."
+for _ in {1..12}; do
+    state_line=\$(stats_csv | awk -F, -v b="\${backend}" -v s="\${INSTANCE_DOWN}" '\$1==b && \$2==s {print \$18}')
+    if [[ "\${state_line}" == "DOWN" ]]; then
+        break
+    fi
+    sleep 2
+done
+
+echo ""
+echo ">>> Backend states after failure"
+print_backend_state "\${backend}"
+
+echo ""
+echo ">>> Verifying service continuity via HAProxy"
+for i in {1..6}; do
+    code=\$(curl -s -o /dev/null -w "%{http_code}" "http://\${HAPROXY_IP}/api/\${path}/")
+    echo "  Request \${i}: HTTP \${code}"
+    if [[ "\${code}" != "200" ]]; then
+        echo "FAIL: service continuity check failed"
+        exit 1
+    fi
+done
+
+if [[ "\${RECOVER}" == "true" ]]; then
+    echo ""
+    echo ">>> Recovering \${INSTANCE_DOWN}"
+    "\${SSH_CMD[@]}" "docker start \${INSTANCE_DOWN}" >/dev/null
+
+    echo "Waiting for HAProxy to mark instance UP..."
+    for _ in {1..15}; do
+        state_line=\$(stats_csv | awk -F, -v b="\${backend}" -v s="\${INSTANCE_DOWN}" '\$1==b && \$2==s {print \$18}')
+        if [[ "\${state_line}" == "UP" ]]; then
+            break
+        fi
+        sleep 2
+    done
+
+    echo ""
+    echo ">>> Backend states after recovery"
+    print_backend_state "\${backend}"
+fi
+
+echo ""
+echo "Failover test completed."
+SCRIPT
+chmod +x "${HOME}/test-failover.sh"
+
 echo "Helper scripts created:"
 echo "  - deploy-infrastructure.sh"
 echo "  - destroy-infrastructure.sh"
 echo "  - check-status.sh"
 echo "  - test-endpoints.sh"
+echo "  - test-roundrobin.sh"
+echo "  - test-failover.sh"
 
 echo "============================================"
 echo "Helper Scripts Created"
