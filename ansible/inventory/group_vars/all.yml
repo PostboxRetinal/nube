@@ -12,9 +12,9 @@ ssh_port: 22
 
 # Network Configuration
 network_prefix: "192.168.56"
-control_node_ip: "192.168.56.10"
-haproxy_ip: "{{ hostvars['vm-haproxy'].ansible_host | default('192.168.56.20') }}"
-microservices_ip: "{{ hostvars['vm-microservices'].ansible_host | default('192.168.56.30') }}"
+control_node_ip: "192.168.57.10"
+haproxy_ip: "{{ (hostvars['vm-haproxy'].ansible_host | default('192.168.56.20')) if (hostvars['vm-haproxy'].ansible_host | default('') not in ['127.0.0.1', 'localhost']) else '192.168.56.20' }}"
+microservices_ip: "{{ (hostvars['vm-microservices'].ansible_host | default('192.168.56.30')) if (hostvars['vm-microservices'].ansible_host | default('') not in ['127.0.0.1', 'localhost']) else '192.168.56.30' }}"
 
 # Common Packages
 common_packages:

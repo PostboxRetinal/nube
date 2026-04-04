@@ -156,19 +156,19 @@ if [[ "${PROVIDER}" == "virtualbox" ]]; then
     echo ""
     echo ">>> Validating VirtualBox host-only network..."
 
-    VBOX_GA_BOX_URL="\${VBOX_GA_BOX_URL:-https://vagrantcloud.com/generic/boxes/ubuntu2204/versions/4.3.12/providers/virtualbox.box}"
-    CACHE_DIR="\${HOME}/.cache/tf-virtualbox"
-    BOX_FILE="\${CACHE_DIR}/generic-ubuntu2204-virtualbox.box"
-    TF_VM_IMAGE="\${BOX_FILE}"
+    VBOX_GA_BOX_URL="${VBOX_GA_BOX_URL:-https://vagrantcloud.com/generic/boxes/ubuntu2204/versions/4.3.12/providers/virtualbox.box}"
+    CACHE_DIR="${HOME}/.cache/tf-virtualbox"
+    BOX_FILE="${CACHE_DIR}/generic-ubuntu2204-virtualbox.box"
+    TF_VM_IMAGE="${BOX_FILE}"
 
-    mkdir -p "\${CACHE_DIR}"
+    mkdir -p "${CACHE_DIR}"
 
-    if [[ ! -f "\${BOX_FILE}" ]]; then
+    if [[ ! -f "${BOX_FILE}" ]]; then
         echo "Downloading Guest Additions base image (generic/ubuntu2204)..."
-        wget -q -O "\${BOX_FILE}" "\${VBOX_GA_BOX_URL}"
+        wget -q -O "${BOX_FILE}" "${VBOX_GA_BOX_URL}"
     fi
 
-    if [[ -z "\${TF_VM_IMAGE}" ]]; then
+    if [[ -z "${TF_VM_IMAGE}" ]]; then
         echo "ERROR: Could not prepare VirtualBox base image file."
         exit 1
     fi
@@ -180,14 +180,14 @@ if [[ "${PROVIDER}" == "virtualbox" ]]; then
         HOSTONLY_IFACE="$(echo "${CREATE_OUTPUT}" | awk -F"'" '{print $2}')"
     fi
 
-    if [[ -z "\${HOSTONLY_IFACE}" ]]; then
+    if [[ -z "${HOSTONLY_IFACE}" ]]; then
         echo "ERROR: Could not determine/create a host-only interface for VirtualBox."
         exit 1
     fi
 
-    VBoxManage hostonlyif ipconfig "\${HOSTONLY_IFACE}" --ip 192.168.56.1 --netmask 255.255.255.0
-    echo "Using host-only interface: \${HOSTONLY_IFACE}"
-    echo "Using VM base image: \${TF_VM_IMAGE}"
+    VBoxManage hostonlyif ipconfig "${HOSTONLY_IFACE}" --ip 192.168.56.1 --netmask 255.255.255.0
+    echo "Using host-only interface: ${HOSTONLY_IFACE}"
+    echo "Using VM base image: ${TF_VM_IMAGE}"
 fi
 
 echo ""
@@ -196,10 +196,10 @@ terraform init
 
 echo ""
 echo ">>> Planning infrastructure..."
-if [[ "\${PROVIDER}" == "virtualbox" ]]; then
+if [[ "${PROVIDER}" == "virtualbox" ]]; then
     terraform plan \
-    -var "vm_image=\${TF_VM_IMAGE}" \
-      -var "network_name=\${HOSTONLY_IFACE}" \
+        -var "vm_image=${TF_VM_IMAGE}" \
+            -var "network_name=${HOSTONLY_IFACE}" \
       -var "network_gateway=192.168.56.1" \
       -out=tfplan
 else
@@ -216,7 +216,7 @@ if [[ "${PROVIDER}" == "libvirt" ]]; then
     echo "Continuing terraform apply."
 fi
 
-if [[ "\${PROVIDER}" == "virtualbox" ]]; then
+if [[ "${PROVIDER}" == "virtualbox" ]]; then
     terraform apply -parallelism=1 -auto-approve tfplan
 else
     terraform apply -auto-approve tfplan

@@ -13,7 +13,7 @@ all:
     
     # Network Configuration
     network_prefix: "192.168.56"
-    control_node_ip: "192.168.56.10"
+    control_node_ip: "192.168.57.10"
     haproxy_ip: "${haproxy_ip}"
     haproxy_ssh_port: "${haproxy_ssh_port}"
     microservices_ip: "${microservices_ip}"
@@ -38,11 +38,11 @@ all:
     haproxy:
       hosts:
         vm-haproxy:
-          ansible_host: ${haproxy_ip}
+          ansible_host: 127.0.0.1
           ansible_port: ${haproxy_ssh_port}
           
     microservices:
       hosts:
         vm-microservices:
-          ansible_host: ${microservices_ip}
+          ansible_host: 127.0.0.1
           ansible_port: ${microservices_ssh_port}
