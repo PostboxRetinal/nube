@@ -18,7 +18,6 @@ VM_VCPU1_CPUSET     = "3"
 CONTROL_NODE_IP     = "192.168.123.10"
 NETWORK_NAME        = "infrastructure-net"
 NETWORK_CIDR        = "192.168.123.0/24"
-MANAGEMENT_NETWORK  = "192.168.121.0/24"
 
 # Paths
 SCRIPTS_PATH        = "../scripts"
@@ -66,10 +65,6 @@ Vagrant.configure("2") do |config|
       # Graphics configuration (headless)
       libvirt.graphics_type = "none"
       libvirt.video_type    = "none"
-      
-      # Management network
-      libvirt.management_network_name    = "vagrant-libvirt"
-      libvirt.management_network_address = MANAGEMENT_NETWORK
       
       # QEMU guest agent channel
       libvirt.channel :type => 'unix',
