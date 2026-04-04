@@ -9,7 +9,7 @@
 BOX_NAME            = "generic/ubuntu2204"
 VM_NAME             = "control-node"
 VM_HOSTNAME         = "control-node"
-VM_MEMORY           = 2048
+VM_MEMORY           = 4096
 VM_CPUS             = 2
 VM_VCPU0_CPUSET     = "2"
 VM_VCPU1_CPUSET     = "3"
