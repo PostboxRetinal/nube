@@ -130,7 +130,7 @@ variable "vms" {
 variable "control_node_ip" {
   description = "IP address of the control node"
   type        = string
-  default     = "192.168.56.10"
+  default     = "192.168.123.10"
 }
 
 # -----------------------------------------------------------------------------

@@ -12,8 +12,8 @@ all:
     ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
     
     # Network Configuration
-    network_prefix: "192.168.56"
-    control_node_ip: "192.168.57.10"
+    network_prefix: "${network_prefix}"
+    control_node_ip: "${control_node_ip}"
     haproxy_ip: "${haproxy_ip}"
     haproxy_ssh_port: "${haproxy_ssh_port}"
     microservices_ip: "${microservices_ip}"
@@ -38,11 +38,11 @@ all:
     haproxy:
       hosts:
         vm-haproxy:
-          ansible_host: 127.0.0.1
+          ansible_host: ${haproxy_ansible_host}
           ansible_port: ${haproxy_ssh_port}
           
     microservices:
       hosts:
         vm-microservices:
-          ansible_host: 127.0.0.1
+          ansible_host: ${microservices_ansible_host}
           ansible_port: ${microservices_ssh_port}

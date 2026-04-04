@@ -57,10 +57,14 @@ resource "local_file" "ansible_inventory" {
   depends_on = [null_resource.wait_for_vm]
 
   content = templatefile("${var.ansible_playbook_path}/templates/inventory.tpl", {
+    network_prefix         = join(".", slice(split(".", split("/", var.network_cidr)[0]), 0, 3))
+    control_node_ip        = var.control_node_ip
     haproxy_ip             = var.vms.haproxy.ip_address
     haproxy_ssh_port       = var.vms.haproxy.ssh_port
+    haproxy_ansible_host   = var.vms.haproxy.ip_address
     microservices_ip       = var.vms.microservices.ip_address
     microservices_ssh_port = var.vms.microservices.ssh_port
+    microservices_ansible_host = var.vms.microservices.ip_address
     ssh_private_key        = var.ssh_private_key_path
     ssh_user               = var.ssh_user
     ssh_password           = var.ssh_password
