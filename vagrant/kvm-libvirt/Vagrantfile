@@ -34,6 +34,19 @@ Vagrant.configure("2") do |config|
       libvirt__dhcp_enabled: false,
       libvirt__forward_mode: "nat"
 
+    # Host-local access to nested HAProxy through control-node proxy
+    node.vm.network "forwarded_port",
+      guest: 80,
+      host: 18080,
+      host_ip: "127.0.0.1",
+      auto_correct: true
+
+    node.vm.network "forwarded_port",
+      guest: 8080,
+      host: 18081,
+      host_ip: "127.0.0.1",
+      auto_correct: true
+
     node.vm.synced_folder "#{PROJECT_ROOT}/terraform", "/home/vagrant/terraform",
       type: "nfs",
       nfs_version: 4,
@@ -100,6 +113,7 @@ Vagrant.configure("2") do |config|
       env: {
         "INFRA_PROVIDER" => "libvirt"
       }
+
     node.vm.provision "configure-ansible",
       type: "shell",
       path: "#{SCRIPTS_PATH}/configure-ansible.sh",
@@ -112,6 +126,17 @@ Vagrant.configure("2") do |config|
       env: {
         "INFRA_PROVIDER" => "libvirt",
         "CONTROL_NODE_IP" => CONTROL_NODE_IP
+      }
+
+    node.vm.provision "setup-host-proxy",
+      type: "shell",
+      path: "#{SCRIPTS_PATH}/setup-host-proxy.sh",
+      privileged: true,
+      env: {
+        "INFRA_PROVIDER" => "libvirt",
+        "CONTROL_NODE_IP" => CONTROL_NODE_IP,
+        "HAPROXY_IP" => "192.168.123.20",
+        "PROXY_BIND_IP" => "0.0.0.0"
       }
 
     # Final message

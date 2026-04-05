@@ -55,6 +55,10 @@ defaults
 listen stats
     bind *:{{ haproxy_stats_port }}
     mode http
+{% if haproxy_stats_allowed_sources is defined and (haproxy_stats_allowed_sources | length) > 0 %}
+    acl stats_allowed src {{ haproxy_stats_allowed_sources | join(' ') }}
+    http-request deny if !stats_allowed
+{% endif %}
     stats enable
     stats uri {{ haproxy_stats_uri }}
     stats refresh {{ haproxy_stats_refresh }}

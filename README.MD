@@ -166,8 +166,21 @@ Ejemplo (libvirt):
 - Products: `http://192.168.123.20/api/products/`
 - Orders: `http://192.168.123.20/api/orders/`
 
+Acceso desde host físico (a través de control-node):
+
+- KVM/libvirt host -> `http://192.168.123.10/api/users/`
+- KVM/libvirt stats -> `http://192.168.123.10:8080/stats`
+- VirtualBox host -> `http://192.168.57.10/api/users/`
+- VirtualBox stats -> `http://192.168.57.10:8080/stats`
+
+Acceso recomendado y estable desde host (idéntico en ambos proveedores):
+
+- API vía port-forward: `http://127.0.0.1:18080/api/users/`
+- Stats vía port-forward: `http://127.0.0.1:18081/stats`
+
 ---
 
 ## Notas operativas
 
 - Las IPs de backend en HAProxy se toman del inventario para evitar hardcode entre libvirt y VirtualBox.
+- En ambos proveedores, `control-node` ejecuta un proxy hacia `vm-haproxy` y Vagrant publica los puertos `18080` y `18081` en `127.0.0.1` del host.

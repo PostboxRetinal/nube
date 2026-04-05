@@ -36,9 +36,13 @@ output "vm_microservices" {
 output "haproxy_endpoints" {
   description = "HAProxy access endpoints"
   value = {
-    http_endpoint  = "http://${var.vms.haproxy.ip_address}:80"
-    stats_endpoint = "http://${var.vms.haproxy.ip_address}:${var.haproxy_stats_port}/stats"
-    stats_user     = var.haproxy_stats_user
+    nested_http_endpoint       = "http://${var.vms.haproxy.ip_address}:80"
+    nested_stats_endpoint      = "http://${var.vms.haproxy.ip_address}:${var.haproxy_stats_port}/stats"
+    host_proxy_http_endpoint   = "http://${var.control_node_ip}:80"
+    host_proxy_stats_endpoint  = "http://${var.control_node_ip}:${var.haproxy_stats_port}/stats"
+    host_local_http_endpoint   = "http://127.0.0.1:18080"
+    host_local_stats_endpoint  = "http://127.0.0.1:18081/stats"
+    stats_user                 = var.haproxy_stats_user
   }
 }
 
@@ -69,6 +73,14 @@ output "test_commands" {
     
     # Access HAProxy stats dashboard
     # URL: http://${var.vms.haproxy.ip_address}:${var.haproxy_stats_port}/stats
+    
+    # Access HAProxy from host via control-node proxy
+    # API URL: http://${var.control_node_ip}:80/api/users/
+    # Stats URL: http://${var.control_node_ip}:${var.haproxy_stats_port}/stats
+    
+    # Stable localhost access from host (both providers)
+    # API URL: http://127.0.0.1:18080/api/users/
+    # Stats URL: http://127.0.0.1:18081/stats
     # Username: ${var.haproxy_stats_user}
     # Password: ${var.haproxy_stats_password}
     
