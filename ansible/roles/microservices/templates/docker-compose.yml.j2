@@ -15,9 +15,7 @@ services:
     container_name: {{ instance.container_name }}
     restart: {{ service.restart_policy | default('always') }}
     ports:
-      - "{{ instance.port }}:80"
-    volumes:
-      - ./nginx-conf/{{ service_key }}.conf:/etc/nginx/conf.d/default.conf:ro
+      - "{{ instance.port }}:{{ instance.container_port | default(instance.port) }}"
     environment:
       SERVICE_NAME: "{{ service.name }}"
       SERVICE_PORT: "{{ instance.port }}"
@@ -29,8 +27,20 @@ services:
 {% endif %}
 {% endfor %}
 {% endif %}
+{% if service.networks is defined %}
+{% if service.networks is string %}
+    networks:
+      - {{ service.networks }}
+{% else %}
+    networks:
+{% for network in service.networks %}
+      - {{ network }}
+{% endfor %}
+{% endif %}
+{% else %}
     networks:
       - {{ docker_network_name }}
+{% endif %}
 {% if service.healthcheck is defined %}
     healthcheck:
       test: {{ service.healthcheck.test | to_json }}

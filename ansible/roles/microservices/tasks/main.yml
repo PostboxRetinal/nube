@@ -11,24 +11,6 @@
     owner: vagrant
     group: vagrant
 
-- name: Create nginx configuration directory
-  file:
-    path: "{{ docker_compose_dir }}/nginx-conf"
-    state: directory
-    mode: '0755'
-    owner: vagrant
-    group: vagrant
-
-- name: Deploy nginx configuration for each service
-  template:
-    src: nginx-service.conf.j2
-    dest: "{{ docker_compose_dir }}/nginx-conf/{{ item.key }}.conf"
-    mode: '0644'
-  loop: "{{ microservices_config | dict2items }}"
-  vars:
-    service_name: "{{ item.key }}"
-    service_config: "{{ item.value }}"
-
 - name: Deploy Docker Compose file
   template:
     src: docker-compose.yml.j2
@@ -65,10 +47,4 @@
     port: "{{ item }}"
     delay: 5
     timeout: 60
-  loop:
-    - 3001
-    - 3002
-    - 3003
-    - 3011
-    - 3012
-    - 3013
+  loop: "{{ microservices_config | dict2items | map(attribute='value.instances') | flatten | map(attribute='port') | list }}"

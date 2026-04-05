@@ -27,16 +27,17 @@ docker_network_driver: "bridge"
 # Each service runs two instances for load balancing demonstration
 microservices_config:
   users:
-    name: "users-service"
-    image: "nginx:alpine"
+    name: "users-svc"
+    image: "bastianb001/users-svc:latest"
     instances:
-      - container_name: "users-service-1"
+      - container_name: "users-svc-1"
         port: 3001
-      - container_name: "users-service-2"
+      - container_name: "users-svc-2"
         port: 3011
     environment:
       SERVICE_NAME: "users-service"
     restart_policy: always
+    networks: "{{ docker_network_name }}"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: "10s"
@@ -44,16 +45,17 @@ microservices_config:
       retries: 3
 
   products:
-    name: "products-service"
-    image: "nginx:alpine"
+    name: "products-svc"
+    image: "bastianb001/products-svc:latest"
     instances:
-      - container_name: "products-service-1"
+      - container_name: "products-svc-1"
         port: 3002
-      - container_name: "products-service-2"
+      - container_name: "products-svc-2"
         port: 3012
     environment:
       SERVICE_NAME: "products-service"
     restart_policy: always
+    networks: "{{ docker_network_name }}"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: "10s"
@@ -61,16 +63,17 @@ microservices_config:
       retries: 3
 
   orders:
-    name: "orders-service"
-    image: "nginx:alpine"
+    name: "orders-svc"
+    image: "bastianb001/orders-svc:latest"
     instances:
-      - container_name: "orders-service-1"
+      - container_name: "orders-svc-1"
         port: 3003
-      - container_name: "orders-service-2"
+      - container_name: "orders-svc-2"
         port: 3013
     environment:
       SERVICE_NAME: "orders-service"
     restart_policy: always
+    networks: "{{ docker_network_name }}"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: "10s"

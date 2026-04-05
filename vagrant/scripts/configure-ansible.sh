@@ -24,6 +24,7 @@ cat > /etc/ansible/ansible.cfg << 'EOF'
 inventory = /home/vagrant/ansible/inventory/hosts.yml
 remote_user = vagrant
 private_key_file = /home/vagrant/.ssh/infra_key
+roles_path = /home/vagrant/ansible/roles
 host_key_checking = False
 retry_files_enabled = False
 gathering = smart

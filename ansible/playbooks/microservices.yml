@@ -51,11 +51,5 @@
       wait_for:
         port: "{{ item }}"
         timeout: 30
-      loop:
-        - 3001
-        - 3002
-        - 3003
-        - 3011
-        - 3012
-        - 3013
+      loop: "{{ microservices_config | dict2items | map(attribute='value.instances') | flatten | map(attribute='port') | list }}"
       ignore_errors: true
