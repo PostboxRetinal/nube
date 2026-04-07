@@ -14,8 +14,8 @@ if [[ "${PROVIDER}" == "libvirt" ]]; then
     DEFAULT_MICROSERVICES_IP="192.168.123.30"
 else
     DEFAULT_CONTROL_IP="192.168.57.10"
-    DEFAULT_HAPROXY_IP="192.168.56.20"
-    DEFAULT_MICROSERVICES_IP="192.168.56.30"
+    DEFAULT_HAPROXY_IP="192.168.57.20"
+    DEFAULT_MICROSERVICES_IP="192.168.57.30"
 fi
 
 CONTROL_IP="${CONTROL_NODE_IP:-${DEFAULT_CONTROL_IP}}"
@@ -188,7 +188,7 @@ if [[ "${PROVIDER}" == "virtualbox" ]]; then
         exit 1
     fi
 
-    VBoxManage hostonlyif ipconfig "${HOSTONLY_IFACE}" --ip 192.168.56.1 --netmask 255.255.255.0
+    VBoxManage hostonlyif ipconfig "${HOSTONLY_IFACE}" --ip 192.168.57.1 --netmask 255.255.255.0
     echo "Using host-only interface: ${HOSTONLY_IFACE}"
     echo "Using VM base image: ${TF_VM_IMAGE}"
 fi
@@ -203,7 +203,7 @@ if [[ "${PROVIDER}" == "virtualbox" ]]; then
     terraform plan \
         -var "vm_image=${TF_VM_IMAGE}" \
             -var "network_name=${HOSTONLY_IFACE}" \
-      -var "network_gateway=192.168.56.1" \
+      -var "network_gateway=192.168.57.1" \
       -out=tfplan
 else
     terraform plan -out=tfplan
