@@ -72,6 +72,13 @@ resource "null_resource" "wait_for_ssh" {
 resource "null_resource" "configure_vm" {
   for_each = var.vms
 
+  triggers = {
+    hostname   = each.value.hostname
+    ip_address = each.value.ip_address
+    ssh_user   = var.ssh_user
+    ssh_port   = tostring(local.ssh_forward_ports[each.key])
+  }
+
   depends_on = [null_resource.wait_for_ssh]
 
   provisioner "local-exec" {
@@ -86,6 +93,13 @@ resource "null_resource" "configure_vm" {
 
 resource "null_resource" "wait_for_vm" {
   for_each = var.vms
+
+  triggers = {
+    hostname   = each.value.hostname
+    ip_address = each.value.ip_address
+    ssh_user   = var.ssh_user
+    ssh_port   = tostring(local.ssh_forward_ports[each.key])
+  }
 
   depends_on = [null_resource.configure_vm]
 

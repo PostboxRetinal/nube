@@ -25,13 +25,13 @@ variable "network_name" {
 variable "network_cidr" {
   description = "CIDR block for the infrastructure network"
   type        = string
-  default     = "192.168.57.0/24"
+  default     = "192.168.58.0/24"
 }
 
 variable "network_gateway" {
   description = "Gateway IP for the network"
   type        = string
-  default     = "192.168.57.1"
+  default     = "192.168.58.1"
 }
 
 # -----------------------------------------------------------------------------
@@ -89,14 +89,14 @@ variable "vms" {
   default = {
     haproxy = {
       hostname   = "vm-haproxy"
-      ip_address = "192.168.57.20"
+      ip_address = "192.168.58.20"
       memory     = 1024
       vcpu       = 1
       role       = "haproxy"
     }
     microservices = {
       hostname   = "vm-microservices"
-      ip_address = "192.168.57.30"
+      ip_address = "192.168.58.30"
       memory     = 2048
       vcpu       = 2
       role       = "microservices"
