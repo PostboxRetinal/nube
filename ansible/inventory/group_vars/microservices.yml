@@ -36,6 +36,7 @@ microservices_config:
         port: 3011
     environment:
       SERVICE_NAME: "users-service"
+      PORT_FRONTEND: "80"
     restart_policy: always
     networks: "{{ docker_network_name }}"
     healthcheck:
@@ -54,6 +55,7 @@ microservices_config:
         port: 3012
     environment:
       SERVICE_NAME: "products-service"
+      PORT_FRONTEND: "80"
     restart_policy: always
     networks: "{{ docker_network_name }}"
     healthcheck:
@@ -72,6 +74,7 @@ microservices_config:
         port: 3013
     environment:
       SERVICE_NAME: "orders-service"
+      PORT_FRONTEND: "80"
     restart_policy: always
     networks: "{{ docker_network_name }}"
     healthcheck:

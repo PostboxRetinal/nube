@@ -64,7 +64,7 @@ haproxy_backends:
     path_prefix: "/api/users"
     balance: "roundrobin"
     options:
-      - "httpchk GET /health"
+      - "httpchk GET /api/users/"
     http_check: "expect status 200"
     servers:
       - name: "users1"
@@ -81,7 +81,7 @@ haproxy_backends:
     path_prefix: "/api/products"
     balance: "roundrobin"
     options:
-      - "httpchk GET /health"
+      - "httpchk GET /api/products/"
     http_check: "expect status 200"
     servers:
       - name: "products1"
@@ -98,7 +98,7 @@ haproxy_backends:
     path_prefix: "/api/orders"
     balance: "roundrobin"
     options:
-      - "httpchk GET /health"
+      - "httpchk GET /api/orders/"
     http_check: "expect status 200"
     servers:
       - name: "orders1"
