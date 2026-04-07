@@ -7,13 +7,7 @@ import os
 
 app = Flask(__name__)
 
-CORS(app, resources={
-    r"/api/*": {
-        "origins": f"http://192.168.80.3:{os.environ['PORT_FRONTEND']}",
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type"]
-    }
-})
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 app.config.from_object('config.Config')
 db.init_app(app)
 
