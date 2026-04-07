@@ -28,16 +28,22 @@ variable "network_name" {
   default     = "infrastructure-net"
 }
 
+variable "network_bridge_name" {
+  description = "Linux bridge interface name used by the libvirt network"
+  type        = string
+  default     = "virbr10"
+}
+
 variable "network_cidr" {
   description = "CIDR block for the infrastructure network"
   type        = string
-  default     = "192.168.123.0/24"
+  default     = "192.168.124.0/24"
 }
 
 variable "network_gateway" {
   description = "Gateway IP for the network"
   type        = string
-  default     = "192.168.123.1"
+  default     = "192.168.124.1"
 }
 
 # -----------------------------------------------------------------------------
@@ -104,7 +110,7 @@ variable "vms" {
   default = {
     haproxy = {
       hostname   = "vm-haproxy"
-      ip_address = "192.168.123.20"
+      ip_address = "192.168.124.20"
       ssh_port   = 22
       memory     = 1024
       vcpu       = 1
@@ -113,7 +119,7 @@ variable "vms" {
     }
     microservices = {
       hostname   = "vm-microservices"
-      ip_address = "192.168.123.30"
+      ip_address = "192.168.124.30"
       ssh_port   = 22
       memory     = 2048
       vcpu       = 2

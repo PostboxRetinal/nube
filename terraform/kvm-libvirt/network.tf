@@ -4,6 +4,7 @@
 
 resource "libvirt_network" "infrastructure" {
   name      = var.network_name
+  bridge    = var.network_bridge_name
   mode      = "nat"
   domain    = "infrastructure.local"
   addresses = [var.network_cidr]

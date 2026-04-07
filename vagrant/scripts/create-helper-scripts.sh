@@ -7,11 +7,12 @@ set -euo pipefail
 
 PROVIDER="${INFRA_PROVIDER:-libvirt}"
 NETWORK_NAME="${NETWORK_NAME:-infrastructure-net}"
+NETWORK_BRIDGE_NAME="${NETWORK_BRIDGE_NAME:-virbr10}"
 
 if [[ "${PROVIDER}" == "libvirt" ]]; then
     DEFAULT_CONTROL_IP="192.168.123.10"
-    DEFAULT_HAPROXY_IP="192.168.123.20"
-    DEFAULT_MICROSERVICES_IP="192.168.123.30"
+    DEFAULT_HAPROXY_IP="192.168.124.20"
+    DEFAULT_MICROSERVICES_IP="192.168.124.30"
 else
     DEFAULT_CONTROL_IP="192.168.57.10"
     DEFAULT_HAPROXY_IP="192.168.57.20"
@@ -39,6 +40,7 @@ set -e
 
 PROVIDER="${INFRA_PROVIDER:-libvirt}"
 NETWORK_NAME="${NETWORK_NAME:-infrastructure-net}"
+NETWORK_BRIDGE_NAME="${NETWORK_BRIDGE_NAME:-virbr10}"
 
 # Map provider names for terraform directory
 if [[ "${PROVIDER}" == "libvirt" ]]; then
@@ -101,6 +103,51 @@ if [[ "${PROVIDER}" == "libvirt" ]]; then
     fi
 
     VIRSH_CMD="sudo virsh -c qemu:///system"
+
+    validate_network_drift() {
+        local expected_bridge="$1"
+        local net_xml current_bridge current_mode
+
+        if ! ${VIRSH_CMD} net-list --all | awk '{print $1}' | grep -q "^${NETWORK_NAME}$"; then
+            return 0
+        fi
+
+        net_xml="$(${VIRSH_CMD} net-dumpxml "${NETWORK_NAME}" 2>/dev/null || true)"
+        current_bridge="$(printf '%s\n' "${net_xml}" | sed -n "s/.*<bridge name='\\([^']*\\)'.*/\\1/p" | head -n1)"
+        current_mode="$(printf '%s\n' "${net_xml}" | sed -n "s/.*<forward mode='\\([^']*\\)'.*/\\1/p" | head -n1)"
+
+        if [[ -z "${current_mode}" ]]; then
+            current_mode="isolated"
+        fi
+
+        if [[ "${current_mode}" != "nat" ]]; then
+            echo "ERROR: Drift detected for libvirt network '${NETWORK_NAME}'."
+            echo "  Expected forward mode: nat"
+            echo "  Current forward mode: ${current_mode}"
+            echo "Refusing to continue to avoid inconsistent behavior."
+            echo "Fix by redefining '${NETWORK_NAME}' with NAT mode, then rerun deployment."
+            return 1
+        fi
+
+        if [[ -n "${current_bridge}" && "${current_bridge}" != "${expected_bridge}" ]]; then
+            echo "ERROR: Drift detected for libvirt network '${NETWORK_NAME}'."
+            echo "  Expected bridge: ${expected_bridge}"
+            echo "  Current bridge:  ${current_bridge}"
+
+            if [[ "${current_bridge}" =~ ^(eth|enp|ens|eno|wlan|wlp)[a-zA-Z0-9._:-]*$ ]]; then
+                echo "  '${current_bridge}' looks like a host interface, which can trigger collisions like:"
+                echo "  'Network is already in use by interface ${current_bridge}'."
+            fi
+
+            echo "Refusing to continue to avoid apply-time failures."
+            echo "Remediation:"
+            echo "  1) terraform destroy (if state exists), or"
+            echo "  2) sudo virsh -c qemu:///system net-destroy '${NETWORK_NAME}' && sudo virsh -c qemu:///system net-undefine '${NETWORK_NAME}'"
+            echo "  3) rerun deployment so Terraform recreates the network with bridge '${expected_bridge}'."
+            return 1
+        fi
+    }
+
     ensure_pool_active() {
         local pool_name="$1"
         local pool_state
@@ -131,6 +178,9 @@ if [[ "${PROVIDER}" == "libvirt" ]]; then
         echo ">>> Network '${NETWORK_NAME}' not found; creating now ..."
         # create network only if not existing; Terraform will own it if provided in network.tf
     fi
+
+    echo ">>> Running libvirt network drift preflight..."
+    validate_network_drift "${NETWORK_BRIDGE_NAME}"
 
     cleanup_existing_domains() {
         local domains_to_remove=()
@@ -206,7 +256,10 @@ if [[ "${PROVIDER}" == "virtualbox" ]]; then
       -var "network_gateway=192.168.57.1" \
       -out=tfplan
 else
-    terraform plan -out=tfplan
+    terraform plan \
+      -var "network_name=${NETWORK_NAME}" \
+      -var "network_bridge_name=${NETWORK_BRIDGE_NAME}" \
+      -out=tfplan
 fi
 
 echo ""
