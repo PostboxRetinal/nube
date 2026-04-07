@@ -78,6 +78,36 @@
       loop: "{{ haproxy_backends | dict2items }}"
       when: haproxy_stats_enabled
 
+    - name: Wait for microservices to be healthy before testing
+      wait_for:
+        host: "{{ microservices_ip }}"
+        port: "{{ item }}"
+        delay: 5
+        timeout: 60
+        state: started
+      loop:
+        - 3001
+        - 3011
+        - 3002
+        - 3012
+        - 3003
+        - 3013
+
+    - name: Wait for microservices to be healthy before testing
+      wait_for:
+        host: "{{ microservices_ip }}"
+        port: "{{ item }}"
+        delay: 5
+        timeout: 60
+        state: started
+      loop:
+        - 3001
+        - 3011
+        - 3002
+        - 3012
+        - 3003
+        - 3013
+
     - name: Verify API routing through HAProxy frontend
       uri:
         url: "http://localhost/api/{{ item.key }}/"

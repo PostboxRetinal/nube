@@ -28,57 +28,60 @@ docker_network_driver: "bridge"
 microservices_config:
   users:
     name: "users-svc"
-    image: "bastianb001/users-svc:latest"
+    image: "jaramillo12004/users-svc:latest"
     instances:
       - container_name: "users-svc-1"
         port: 3001
       - container_name: "users-svc-2"
         port: 3011
+        container_port: 3001
     environment:
       SERVICE_NAME: "users-service"
       PORT_FRONTEND: "80"
     restart_policy: always
     networks: "{{ docker_network_name }}"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      test: ["CMD", "curl", "-f", "http://localhost/api/users"]
       interval: "10s"
       timeout: "5s"
       retries: 3
 
   products:
     name: "products-svc"
-    image: "bastianb001/products-svc:latest"
+    image: "jaramillo12004/products-svc:latest"
     instances:
       - container_name: "products-svc-1"
         port: 3002
       - container_name: "products-svc-2"
         port: 3012
+        container_port: 3002
     environment:
       SERVICE_NAME: "products-service"
       PORT_FRONTEND: "80"
     restart_policy: always
     networks: "{{ docker_network_name }}"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      test: ["CMD", "curl", "-f", "http://localhost/api/products"]
       interval: "10s"
       timeout: "5s"
       retries: 3
 
   orders:
     name: "orders-svc"
-    image: "bastianb001/orders-svc:latest"
+    image: "jaramillo12004/orders-svc:latest"
     instances:
       - container_name: "orders-svc-1"
         port: 3003
       - container_name: "orders-svc-2"
         port: 3013
+        container_port: 3003
     environment:
       SERVICE_NAME: "orders-service"
       PORT_FRONTEND: "80"
     restart_policy: always
     networks: "{{ docker_network_name }}"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      test: ["CMD", "curl", "-f", "http://localhost/api/orders"]
       interval: "10s"
       timeout: "5s"
       retries: 3

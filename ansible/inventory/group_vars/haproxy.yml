@@ -17,7 +17,7 @@ haproxy_stats_enabled: true
 haproxy_stats_port: 8080
 haproxy_stats_uri: "/stats"
 haproxy_stats_user: "admin"
-haproxy_stats_password: "haproxy_Admin1*"
+haproxy_stats_password: "haproxy_admin_2024"
 haproxy_stats_refresh: "10s"
 haproxy_stats_realm: "HAProxy Statistics"
 haproxy_stats_allowed_sources:
@@ -64,7 +64,7 @@ haproxy_backends:
     path_prefix: "/api/users"
     balance: "roundrobin"
     options:
-      - "httpchk GET /api/users/"
+      - "httpchk GET /api/users"
     http_check: "expect status 200"
     servers:
       - name: "users1"
@@ -81,7 +81,7 @@ haproxy_backends:
     path_prefix: "/api/products"
     balance: "roundrobin"
     options:
-      - "httpchk GET /api/products/"
+      - "httpchk GET /api/products"
     http_check: "expect status 200"
     servers:
       - name: "products1"
@@ -98,7 +98,7 @@ haproxy_backends:
     path_prefix: "/api/orders"
     balance: "roundrobin"
     options:
-      - "httpchk GET /api/orders/"
+      - "httpchk GET /api/orders"
     http_check: "expect status 200"
     servers:
       - name: "orders1"

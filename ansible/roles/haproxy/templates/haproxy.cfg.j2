@@ -109,6 +109,7 @@ backend {{ backend.name }}
 {% if backend.http_check is defined %}
     http-check {{ backend.http_check }}
 {% endif %}
+    http-request replace-path ^{{ backend.path_prefix }}/$ {{ backend.path_prefix }}
     
     # Backend servers
 {% for server in backend.servers %}
