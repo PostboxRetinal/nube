@@ -33,6 +33,7 @@ apt-get install -y -qq \
     python3-pip \
     python3-venv \
     sshpass \
+    socat \
     net-tools \
     iputils-ping \
     dnsutils \

@@ -27,6 +27,12 @@ echo "Nested HAProxy target IP: ${HAPROXY_IP}"
 echo "Proxy bind IP: ${PROXY_BIND_IP}"
 echo "============================================"
 
+if ! command -v socat >/dev/null 2>&1; then
+  echo "ERROR: socat is required but not installed."
+  echo "Install it with: sudo apt-get update && sudo apt-get install -y socat"
+  exit 1
+fi
+
 cat > /usr/local/bin/haproxy-host-proxy.sh <<EOF
 #!/bin/bash
 set -euo pipefail
