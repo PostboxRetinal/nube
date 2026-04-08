@@ -25,11 +25,18 @@
     name: "{{ docker_network_name }}"
     state: present
 
-- name: Pull Docker images
+- name: Force pull updated microservices images
   docker_image:
     name: "{{ item.value.image }}"
     source: pull
+    force_source: true
   loop: "{{ microservices_config | dict2items }}"
+
+- name: Stop and remove existing containers
+  shell: |
+    docker compose -f {{ docker_compose_dir }}/docker-compose.yml down -v --remove-orphans || true
+  args:
+    executable: /bin/bash
 
 - name: Start microservices with Docker Compose
   community.docker.docker_compose_v2:
@@ -45,11 +52,11 @@
 
 - name: Wait for Docker Compose to complete
   pause:
-    seconds: 10
+    seconds: 30
 
 - name: Ensure app_users exists in users_db
   shell: |
-    docker exec users_db sh -c "mysql -uroot -proot -e \"SELECT 1 FROM mysql.user WHERE User='app_users' AND Host='localhost'\" | grep -q 1 || mysql -uroot -proot -e \"CREATE USER 'app_users'@'localhost' IDENTIFIED BY 'app_password'; GRANT ALL PRIVILEGES ON users_db.* TO 'app_users'@'localhost'; FLUSH PRIVILEGES;\""
+    docker exec users_db sh -c "mysql -uroot -proot -e \"CREATE USER IF NOT EXISTS 'app_users'@'localhost' IDENTIFIED BY 'app_password'; CREATE USER IF NOT EXISTS 'app_users'@'%' IDENTIFIED BY 'app_password'; GRANT ALL PRIVILEGES ON users_db.* TO 'app_users'@'localhost'; GRANT ALL PRIVILEGES ON users_db.* TO 'app_users'@'%'; FLUSH PRIVILEGES;\""
   args:
     executable: /bin/bash
   register: users_db_user_result
@@ -64,7 +71,7 @@
 
 - name: Ensure app_products exists in products_db
   shell: |
-    docker exec products_db sh -c "mysql -uroot -proot -e \"SELECT 1 FROM mysql.user WHERE User='app_products' AND Host='localhost'\" | grep -q 1 || mysql -uroot -proot -e \"CREATE USER 'app_products'@'localhost' IDENTIFIED BY 'app_password'; GRANT ALL PRIVILEGES ON products_db.* TO 'app_products'@'localhost'; FLUSH PRIVILEGES;\""
+    docker exec products_db sh -c "mysql -uroot -proot -e \"CREATE USER IF NOT EXISTS 'app_products'@'localhost' IDENTIFIED BY 'app_password'; CREATE USER IF NOT EXISTS 'app_products'@'%' IDENTIFIED BY 'app_password'; GRANT ALL PRIVILEGES ON products_db.* TO 'app_products'@'localhost'; GRANT ALL PRIVILEGES ON products_db.* TO 'app_products'@'%'; FLUSH PRIVILEGES;\""
   args:
     executable: /bin/bash
   register: products_db_user_result
@@ -79,7 +86,7 @@
 
 - name: Ensure app_orders exists in orders_db
   shell: |
-    docker exec orders_db sh -c "mysql -uroot -proot -e \"SELECT 1 FROM mysql.user WHERE User='app_orders' AND Host='localhost'\" | grep -q 1 || mysql -uroot -proot -e \"CREATE USER 'app_orders'@'localhost' IDENTIFIED BY 'app_password'; GRANT ALL PRIVILEGES ON orders_db.* TO 'app_orders'@'localhost'; FLUSH PRIVILEGES;\""
+    docker exec orders_db sh -c "mysql -uroot -proot -e \"CREATE USER IF NOT EXISTS 'app_orders'@'localhost' IDENTIFIED BY 'app_password'; CREATE USER IF NOT EXISTS 'app_orders'@'%' IDENTIFIED BY 'app_password'; GRANT ALL PRIVILEGES ON orders_db.* TO 'app_orders'@'localhost'; GRANT ALL PRIVILEGES ON orders_db.* TO 'app_orders'@'%'; FLUSH PRIVILEGES;\""
   args:
     executable: /bin/bash
   register: orders_db_user_result
