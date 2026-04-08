@@ -133,7 +133,7 @@ variable "haproxy_stats_user" {
 variable "haproxy_stats_password" {
   description = "Password for HAProxy stats"
   type        = string
-  default     = "haproxy_admin_2024"
+  default     = "haproxy_admin_2026"
   sensitive   = true
 }
 

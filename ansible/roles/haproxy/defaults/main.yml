@@ -17,6 +17,6 @@ haproxy_stats_enabled: true
 haproxy_stats_port: 8080
 haproxy_stats_uri: "/stats"
 haproxy_stats_user: "admin"
-haproxy_stats_password: "haproxy_admin_2024"
+haproxy_stats_password: "haproxy_admin_2026"
 haproxy_stats_refresh: "10s"
 haproxy_stats_realm: "HAProxy Statistics"

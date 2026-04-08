@@ -325,7 +325,7 @@ PROVIDER="\${INFRA_PROVIDER:-${PROVIDER}}"
 HAPROXY_IP="\${HAPROXY_IP:-${HAPROXY_IP}}"
 MICROSERVICES_IP="\${MICROSERVICES_IP:-${MICROSERVICES_IP}}"
 HAPROXY_STATS_USER="\${HAPROXY_STATS_USER:-admin}"
-HAPROXY_STATS_PASSWORD="\${HAPROXY_STATS_PASSWORD:-haproxy_admin_2024}"
+HAPROXY_STATS_PASSWORD="\${HAPROXY_STATS_PASSWORD:-haproxy_admin_2026}"
 
 echo "============================================"
 echo "Infrastructure Status Check"
@@ -414,7 +414,7 @@ echo ">>> Testing /api/orders/"
 curl -s -w "\\nHTTP Status: %{http_code}\\n" "http://\${HAPROXY_IP}/api/orders/" || echo "Failed to connect"
 
 echo ""
-echo ">>> HAProxy Stats (use admin:haproxy_admin_2024)"
+echo ">>> HAProxy Stats (use admin:haproxy_admin_2026)"
 echo "URL: http://\${HAPROXY_IP}:8080/stats"
 
 echo ""
@@ -492,7 +492,7 @@ else
 fi
 
 stats_csv() {
-    curl -s -u "admin:haproxy_admin_2024" "http://\${HAPROXY_IP}:8080/stats;csv"
+    curl -s -u "admin:haproxy_admin_2026" "http://\${HAPROXY_IP}:8080/stats;csv"
 }
 
 print_backend_state() {
