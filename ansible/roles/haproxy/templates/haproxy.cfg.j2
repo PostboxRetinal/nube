@@ -110,6 +110,8 @@ backend {{ backend.name }}
     http-check {{ backend.http_check }}
 {% endif %}
     http-request replace-path ^{{ backend.path_prefix }}/$ {{ backend.path_prefix }}
+    http-response set-header X-Upstream-Backend %[be_name]
+    http-response set-header X-Upstream-Server %[srv_name]
     
     # Backend servers
 {% for server in backend.servers %}

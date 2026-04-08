@@ -7,18 +7,18 @@ metadata:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: users_db
+  name: users-db
   namespace: webapp
 spec:
-  serviceName: users_db
+  serviceName: users-db
   replicas: 1
   selector:
     matchLabels:
-      app: users_db
+      app: users-db
   template:
     metadata:
       labels:
-        app: users_db
+        app: users-db
     spec:
       containers:
         - name: mysql
@@ -28,15 +28,15 @@ spec:
               name: mysql
           env:
             - name: MYSQL_ROOT_PASSWORD
-              value: "app_password"
+              value: "app-password"
             - name: MYSQL_DATABASE
-              value: "users_db"
+              value: "users-db"
             - name: MYSQL_USER
-              value: "app_users"
+              value: "app-users"
             - name: MYSQL_PASSWORD
-              value: "app_password"
+              value: "app-password"
           volumeMounts:
-            - name: users_db-storage
+            - name: users-db-storage
               mountPath: /var/lib/mysql
           resources:
             requests:
@@ -57,7 +57,7 @@ spec:
             periodSeconds: 5
   volumeClaimTemplates:
     - metadata:
-        name: users_db-storage
+        name: users-db-storage
       spec:
         accessModes: ["ReadWriteOnce"]
         resources:
@@ -68,12 +68,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: users_db
+  name: users-db
   namespace: webapp
 spec:
   type: ClusterIP
   selector:
-    app: users_db
+    app: users-db
   ports:
     - port: 3306
       targetPort: 3306
@@ -82,18 +82,18 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: products_db
+  name: products-db
   namespace: webapp
 spec:
-  serviceName: products_db
+  serviceName: products-db
   replicas: 1
   selector:
     matchLabels:
-      app: products_db
+      app: products-db
   template:
     metadata:
       labels:
-        app: products_db
+        app: products-db
     spec:
       containers:
         - name: mysql
@@ -103,15 +103,15 @@ spec:
               name: mysql
           env:
             - name: MYSQL_ROOT_PASSWORD
-              value: "app_password"
+              value: "app-password"
             - name: MYSQL_DATABASE
-              value: "products_db"
+              value: "products-db"
             - name: MYSQL_USER
               value: "app_products"
             - name: MYSQL_PASSWORD
-              value: "app_password"
+              value: "app-password"
           volumeMounts:
-            - name: products_db-storage
+            - name: products-db-storage
               mountPath: /var/lib/mysql
           resources:
             requests:
@@ -132,7 +132,7 @@ spec:
             periodSeconds: 5
   volumeClaimTemplates:
     - metadata:
-        name: products_db-storage
+        name: products-db-storage
       spec:
         accessModes: ["ReadWriteOnce"]
         resources:
@@ -143,12 +143,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: products_db
+  name: products-db
   namespace: webapp
 spec:
   type: ClusterIP
   selector:
-    app: products_db
+    app: products-db
   ports:
     - port: 3306
       targetPort: 3306
@@ -157,18 +157,18 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: orders_db
+  name: orders-db
   namespace: webapp
 spec:
-  serviceName: orders_db
+  serviceName: orders-db
   replicas: 1
   selector:
     matchLabels:
-      app: orders_db
+      app: orders-db
   template:
     metadata:
       labels:
-        app: orders_db
+        app: orders-db
     spec:
       containers:
         - name: mysql
@@ -178,15 +178,15 @@ spec:
               name: mysql
           env:
             - name: MYSQL_ROOT_PASSWORD
-              value: "app_password"
+              value: "app-password"
             - name: MYSQL_DATABASE
-              value: "orders_db"
+              value: "orders-db"
             - name: MYSQL_USER
-              value: "app_orders"
+              value: "app-orders"
             - name: MYSQL_PASSWORD
-              value: "app_password"
+              value: "app-password"
           volumeMounts:
-            - name: orders_db-storage
+            - name: orders-db-storage
               mountPath: /var/lib/mysql
           resources:
             requests:
@@ -207,7 +207,7 @@ spec:
             periodSeconds: 5
   volumeClaimTemplates:
     - metadata:
-        name: orders_db-storage
+        name: orders-db-storage
       spec:
         accessModes: ["ReadWriteOnce"]
         resources:
@@ -218,12 +218,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: orders_db
+  name: orders-db
   namespace: webapp
 spec:
   type: ClusterIP
   selector:
-    app: orders_db
+    app: orders-db
   ports:
     - port: 3306
       targetPort: 3306
@@ -251,19 +251,19 @@ spec:
             - containerPort: 3001
           env:
             - name: MYSQL_HOST
-              value: "users_db"
+              value: "users-db"
             - name: DB_HOST
-              value: "users_db"
+              value: "users-db"
             - name: DATABASE_HOST
-              value: "users_db"
+              value: "users-db"
             - name: MYSQL_USER
-              value: "app_users"
+              value: "app-users"
             - name: MYSQL_PASSWORD
-              value: "app_password"
+              value: "app-password"
             - name: MYSQL_DB
-              value: "users_db"
+              value: "users-db"
             - name: MYSQL_DATABASE
-              value: "users_db"
+              value: "users-db"
           resources:
             requests:
               cpu: "100m"
@@ -317,19 +317,19 @@ spec:
             - containerPort: 3002
           env:
             - name: MYSQL_HOST
-              value: "products_db"
+              value: "products-db"
             - name: DB_HOST
-              value: "products_db"
+              value: "products-db"
             - name: DATABASE_HOST
-              value: "products_db"
+              value: "products-db"
             - name: MYSQL_USER
               value: "app_products"
             - name: MYSQL_PASSWORD
-              value: "app_password"
+              value: "app-password"
             - name: MYSQL_DB
-              value: "products_db"
+              value: "products-db"
             - name: MYSQL_DATABASE
-              value: "products_db"
+              value: "products-db"
           resources:
             requests:
               cpu: "100m"
@@ -383,19 +383,19 @@ spec:
             - containerPort: 3003
           env:
             - name: MYSQL_HOST
-              value: "orders_db"
+              value: "orders-db"
             - name: DB_HOST
-              value: "orders_db"
+              value: "orders-db"
             - name: DATABASE_HOST
-              value: "orders_db"
+              value: "orders-db"
             - name: MYSQL_USER
-              value: "app_orders"
+              value: "app-orders"
             - name: MYSQL_PASSWORD
-              value: "app_password"
+              value: "app-password"
             - name: MYSQL_DB
-              value: "orders_db"
+              value: "orders-db"
             - name: MYSQL_DATABASE
-              value: "orders_db"
+              value: "orders-db"
           resources:
             requests:
               cpu: "100m"
