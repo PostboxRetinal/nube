@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [ "$#" -ne 6 ]; then
+  echo "Usage: $0 <vm_name> <vm_image> <vm_cpus> <vm_memory> <hostonly_iface> <ssh_fwd_port>" >&2
+  exit 1
+fi
+
 VM_NAME="$1"
 VM_IMAGE="$2"
 VM_CPUS="$3"
