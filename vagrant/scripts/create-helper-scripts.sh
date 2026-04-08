@@ -394,24 +394,36 @@ chmod +x "${HOME}/check-status.sh"
 # Create test endpoints script
 cat > "${HOME}/test-endpoints.sh" << SCRIPT
 #!/bin/bash
+set -euo pipefail
 
 HAPROXY_IP="\${HAPROXY_IP:-${HAPROXY_IP}}"
+overall_status=0
 
 echo "============================================"
 echo "Testing HAProxy Endpoints"
 echo "============================================"
 
-echo ""
-echo ">>> Testing /api/users/"
-curl -s -w "\\nHTTP Status: %{http_code}\\n" "http://\${HAPROXY_IP}/api/users/" || echo "Failed to connect"
+for service in users products orders; do
+    url="http://\${HAPROXY_IP}/api/\${service}/"
+    body_file=\$(mktemp)
 
-echo ""
-echo ">>> Testing /api/products/"
-curl -s -w "\\nHTTP Status: %{http_code}\\n" "http://\${HAPROXY_IP}/api/products/" || echo "Failed to connect"
+    echo ""
+    echo ">>> Testing \${url}"
+    http_code=\$(curl -sS -o "\${body_file}" -w "%{http_code}" "\${url}" 2>/dev/null || echo "000")
 
-echo ""
-echo ">>> Testing /api/orders/"
-curl -s -w "\\nHTTP Status: %{http_code}\\n" "http://\${HAPROXY_IP}/api/orders/" || echo "Failed to connect"
+    if [[ "\${http_code}" == "200" ]]; then
+        echo "  RESULT: PASS (HTTP \${http_code})"
+    else
+        echo "  RESULT: FAIL (HTTP \${http_code})"
+        if [[ -s "\${body_file}" ]]; then
+            echo "  Response body:"
+            cat "\${body_file}"
+        fi
+        overall_status=1
+    fi
+
+    rm -f "\${body_file}"
+done
 
 echo ""
 echo ">>> HAProxy Stats (use admin:haproxy_admin_2026)"
@@ -419,6 +431,13 @@ echo "URL: http://\${HAPROXY_IP}:8080/stats"
 
 echo ""
 echo "============================================"
+
+if [[ "\${overall_status}" -ne 0 ]]; then
+    echo "Endpoint test failed."
+    exit 1
+fi
+
+echo "Endpoint test completed successfully."
 SCRIPT
 chmod +x "${HOME}/test-endpoints.sh"
 
@@ -429,11 +448,6 @@ set -euo pipefail
 
 HAPROXY_IP="\${HAPROXY_IP:-${HAPROXY_IP}}"
 REQUESTS="\${REQUESTS:-12}"
-
-if ! command -v jq >/dev/null 2>&1; then
-    echo "ERROR: jq is required for this test."
-    exit 1
-fi
 
 echo "============================================"
 echo "Testing HAProxy Round-Robin Distribution"
@@ -446,10 +460,40 @@ for service in users products orders; do
 
     declare -A hits=()
     for i in \$(seq 1 "\${REQUESTS}"); do
-        body=\$(curl -s "http://\${HAPROXY_IP}/api/\${service}/")
-        server=\$(echo "\${body}" | jq -r '.server // "unknown"')
+        url="http://\${HAPROXY_IP}/api/\${service}/"
+        headers_file=\$(mktemp)
+        body_file=\$(mktemp)
+        http_code=\$(curl -sS -D "\${headers_file}" -o "\${body_file}" -w "%{http_code}" "\${url}" 2>/dev/null || echo "000")
+
+        if [[ "\${http_code}" != "200" ]]; then
+            echo "  FAIL: request \${i} returned HTTP \${http_code}"
+            if [[ -s "\${body_file}" ]]; then
+                echo "  Response body:"
+                cat "\${body_file}"
+            fi
+            rm -f "\${headers_file}" "\${body_file}"
+            exit 1
+        fi
+
+        server=\$(awk 'BEGIN{IGNORECASE=1} tolower(\$1)=="x-upstream-server:" {gsub("\\r", "", \$2); print \$2; exit}' "\${headers_file}")
+
+        if [[ -z "\${server}" || "\${server}" == "-" ]]; then
+            if command -v jq >/dev/null 2>&1; then
+                server=\$(jq -r '.server // .instance // .instance_id // .instanceId // .INSTANCE_ID // empty' "\${body_file}" 2>/dev/null || true)
+            fi
+        fi
+
+        if [[ -z "\${server}" || "\${server}" == "null" ]]; then
+            echo "  FAIL: could not determine backend server for request \${i}"
+            echo "  Hint: ensure HAProxy sets X-Upstream-Server."
+            rm -f "\${headers_file}" "\${body_file}"
+            exit 1
+        fi
+
         current=\${hits[\$server]:-0}
         hits[\$server]=\$((current + 1))
+
+        rm -f "\${headers_file}" "\${body_file}"
     done
 
     uniq_count=0
@@ -479,10 +523,12 @@ set -euo pipefail
 HAPROXY_IP="\${HAPROXY_IP:-${HAPROXY_IP}}"
 MICROSERVICES_IP="\${MICROSERVICES_IP:-${MICROSERVICES_IP}}"
 SERVICE="\${SERVICE:-users}"
-INSTANCE_DOWN="\${INSTANCE_DOWN:-users-service-1}"
+INSTANCE_DOWN="\${INSTANCE_DOWN:-}"
 RECOVER="\${RECOVER:-true}"
 SSH_USER="\${SSH_USER:-vagrant}"
 SSH_KEY="\${SSH_KEY:-/home/vagrant/.ssh/infra_key}"
+HAPROXY_STATS_USER="\${HAPROXY_STATS_USER:-admin}"
+HAPROXY_STATS_PASSWORD="\${HAPROXY_STATS_PASSWORD:-haproxy_admin_2026}"
 SSH_OPTS="-o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
 if [[ -f "\${SSH_KEY}" ]]; then
@@ -492,42 +538,89 @@ else
 fi
 
 stats_csv() {
-    curl -s -u "admin:haproxy_admin_2026" "http://\${HAPROXY_IP}:8080/stats;csv"
+    curl -sS -u "\${HAPROXY_STATS_USER}:\${HAPROXY_STATS_PASSWORD}" "http://\${HAPROXY_IP}:8080/stats;csv"
 }
 
 print_backend_state() {
     local backend_name="\$1"
-    echo "\$(stats_csv | awk -F, -v b="\${backend_name}" '\$1==b && \$2!="BACKEND" {print "  " \$2 ": " \$18}')"
+    stats_csv | awk -F, -v b="\${backend_name}" '\$1==b && \$2!="BACKEND" {print "  " \$2 ": " \$18}'
+}
+
+wait_for_backend_server_state() {
+    local backend_name="\$1"
+    local backend_server="\$2"
+    local expected_state="\$3"
+    local max_attempts="\$4"
+
+    for _ in \$(seq 1 "\${max_attempts}"); do
+        state_line=\$(stats_csv | awk -F, -v b="\${backend_name}" -v s="\${backend_server}" '\$1==b && \$2==s {print \$18; exit}')
+        if [[ -n "\${state_line}" && "\${state_line}" == \${expected_state}* ]]; then
+            return 0
+        fi
+        sleep 2
+    done
+
+    return 1
 }
 
 echo "============================================"
 echo "Testing HAProxy Failover"
-echo "Service: \${SERVICE} | Stop instance: \${INSTANCE_DOWN}"
 echo "============================================"
 
 case "\${SERVICE}" in
-  users) backend="users_back"; path="users" ;;
-  products) backend="products_back"; path="products" ;;
-  orders) backend="orders_back"; path="orders" ;;
+  users) backend="users_back"; path="users"; default_instance="users-svc-1" ;;
+  products) backend="products_back"; path="products"; default_instance="products-svc-1" ;;
+  orders) backend="orders_back"; path="orders"; default_instance="orders-svc-1" ;;
   *) echo "Invalid SERVICE. Use users|products|orders"; exit 1 ;;
 esac
+
+if [[ -z "\${INSTANCE_DOWN}" ]]; then
+    INSTANCE_DOWN="\${default_instance}"
+fi
+
+case "\${SERVICE}:\${INSTANCE_DOWN}" in
+  users:users-service-1) INSTANCE_DOWN="users-svc-1"; backend_server="users1" ;;
+  users:users-service-2) INSTANCE_DOWN="users-svc-2"; backend_server="users2" ;;
+  users:users-svc-1) backend_server="users1" ;;
+  users:users-svc-2) backend_server="users2" ;;
+  products:products-service-1) INSTANCE_DOWN="products-svc-1"; backend_server="products1" ;;
+  products:products-service-2) INSTANCE_DOWN="products-svc-2"; backend_server="products2" ;;
+  products:products-svc-1) backend_server="products1" ;;
+  products:products-svc-2) backend_server="products2" ;;
+  orders:orders-service-1) INSTANCE_DOWN="orders-svc-1"; backend_server="orders1" ;;
+  orders:orders-service-2) INSTANCE_DOWN="orders-svc-2"; backend_server="orders2" ;;
+  orders:orders-svc-1) backend_server="orders1" ;;
+  orders:orders-svc-2) backend_server="orders2" ;;
+  *)
+    echo "Invalid INSTANCE_DOWN '\${INSTANCE_DOWN}' for SERVICE '\${SERVICE}'."
+    echo "Expected one of the current container names ending in -svc-1/-svc-2."
+    exit 1
+    ;;
+esac
+
+container_names="\$("\${SSH_CMD[@]}" "docker ps -a --format '{{.Names}}'" || true)"
+if ! grep -Fxq "\${INSTANCE_DOWN}" <<< "\${container_names}"; then
+    echo "ERROR: container '\${INSTANCE_DOWN}' does not exist on \${MICROSERVICES_IP}."
+    echo "Available containers:"
+    printf '%s\n' "\${container_names}"
+    exit 1
+fi
+
+echo "Service: \${SERVICE} | Stop instance: \${INSTANCE_DOWN}"
 
 echo ""
 echo ">>> Initial backend states"
 print_backend_state "\${backend}"
 
 echo ""
-echo ">>> Stopping \${INSTANCE_DOWN} on \${MICROSERVICES_IP}"
+echo ">>> Stopping \${INSTANCE_DOWN} (HAProxy server: \${backend_server}) on \${MICROSERVICES_IP}"
 "\${SSH_CMD[@]}" "docker stop \${INSTANCE_DOWN}" >/dev/null
 
 echo "Waiting for HAProxy health-check detection..."
-for _ in {1..12}; do
-    state_line=\$(stats_csv | awk -F, -v b="\${backend}" -v s="\${INSTANCE_DOWN}" '\$1==b && \$2==s {print \$18}')
-    if [[ "\${state_line}" == "DOWN" ]]; then
-        break
-    fi
-    sleep 2
-done
+if ! wait_for_backend_server_state "\${backend}" "\${backend_server}" "DOWN" 12; then
+    echo "FAIL: HAProxy did not mark \${backend_server} as DOWN in time."
+    exit 1
+fi
 
 echo ""
 echo ">>> Backend states after failure"
@@ -550,13 +643,10 @@ if [[ "\${RECOVER}" == "true" ]]; then
     "\${SSH_CMD[@]}" "docker start \${INSTANCE_DOWN}" >/dev/null
 
     echo "Waiting for HAProxy to mark instance UP..."
-    for _ in {1..15}; do
-        state_line=\$(stats_csv | awk -F, -v b="\${backend}" -v s="\${INSTANCE_DOWN}" '\$1==b && \$2==s {print \$18}')
-        if [[ "\${state_line}" == "UP" ]]; then
-            break
-        fi
-        sleep 2
-    done
+    if ! wait_for_backend_server_state "\${backend}" "\${backend_server}" "UP" 15; then
+        echo "FAIL: HAProxy did not mark \${backend_server} as UP in time."
+        exit 1
+    fi
 
     echo ""
     echo ">>> Backend states after recovery"
