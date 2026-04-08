@@ -2,15 +2,30 @@
 
 ## Índice
 
-1. [Login y Configuración de Azure](#1-login-y-configuración-de-azure)
-2. [Crear el Cluster AKS](#2-crear-el-cluster-aks)
-3. [Instalar Nginx Ingress Controller](#3-instalar-nginx-ingress-controller)
-4. [Deploy de la Aplicación](#4-deploy-de-la-aplicación)
-5. [Requisito 11: Verificar pods a través del Service](#5-requisito-11-verificar-pods-a-través-del-service)
-6. [Requisito 12: Ingress y acceso externo](#6-requisito-12-ingress-y-acceso-externo)
-7. [Requisito 13: Escalado horizontal](#7-requisito-13-escalado-horizontal)
-8. [Requisito 14: Estado general del cluster](#8-requisito-14-estado-general-del-cluster)
-9. [Limpieza](#9-limpieza)
+- [Deploy en Azure Kubernetes Service (AKS) - Microservicios](#deploy-en-azure-kubernetes-service-aks---microservicios)
+  - [Índice](#índice)
+  - [1. Login y Configuración de Azure](#1-login-y-configuración-de-azure)
+  - [2. Crear el Cluster AKS](#2-crear-el-cluster-aks)
+  - [3. Instalar Nginx Ingress Controller](#3-instalar-nginx-ingress-controller)
+  - [4. Deploy de la Aplicación](#4-deploy-de-la-aplicación)
+  - [5. Requisito 11: Verificar pods a través del Service](#5-requisito-11-verificar-pods-a-través-del-service)
+    - [Listar Services](#listar-services)
+    - [Probar servicios con kubectl run (curl)](#probar-servicios-con-kubectl-run-curl)
+    - [Alternativa: Port-forward](#alternativa-port-forward)
+  - [6. Requisito 12: Ingress y acceso externo](#6-requisito-12-ingress-y-acceso-externo)
+    - [Obtener información del Ingress](#obtener-información-del-ingress)
+    - [Probar rutas del Ingress](#probar-rutas-del-ingress)
+  - [7. Requisito 13: Escalado horizontal](#7-requisito-13-escalado-horizontal)
+    - [Estado inicial (2 replicas)](#estado-inicial-2-replicas)
+    - [Escalar a 4 replicas](#escalar-a-4-replicas)
+    - [Verificar nuevas replicas](#verificar-nuevas-replicas)
+    - [Verificar distribución de tráfico durante escalado](#verificar-distribución-de-tráfico-durante-escalado)
+    - [Escalar de vuelta a 2 (opcional)](#escalar-de-vuelta-a-2-opcional)
+  - [8. Requisito 14: Estado general del cluster](#8-requisito-14-estado-general-del-cluster)
+    - [Estado completo](#estado-completo)
+    - [Otros comandos de verificación](#otros-comandos-de-verificación)
+  - [9. Limpieza](#9-limpieza)
+  - [Comandos útiles de debugging](#comandos-útiles-de-debugging)
 
 ---
 
@@ -73,6 +88,63 @@ cd aks/
 # Aplicar el manifest de la aplicación
 vim webapp-k8s.yaml
 kubectl apply -f webapp-k8s.yaml
+kubectl delete -f microapp-k8s.yaml
+
+# Insertar tablas pendientes 1/3 ---
+kubectl exec -it users-db-0 -n webapp -c mysql -- mysql -uroot -papp-password
+Then paste:
+CREATE USER IF NOT EXISTS 'app-users'@'%' IDENTIFIED BY 'app-password';
+GRANT ALL PRIVILEGES ON `users-db`.* TO 'app-users'@'%';
+USE `users-db`;
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(100) NOT NULL UNIQUE,
+  username VARCHAR(100) NOT NULL UNIQUE,
+  password VARCHAR(100) NOT NULL
+);
+FLUSH PRIVILEGES;
+EXIT;
+# ---
+
+# Insertar tablas pendientes 2/3 ---
+kubectl exec -it orders-db-0 -n webapp -c mysql -- mysql -uroot -papp-password
+Then paste:
+CREATE USER IF NOT EXISTS 'app-orders'@'%' IDENTIFIED BY 'app-password';
+GRANT ALL PRIVILEGES ON `orders-db`.* TO 'app-orders'@'%';
+USE `orders-db`;
+CREATE TABLE IF NOT EXISTS orders (
+  id VARCHAR(36) PRIMARY KEY,
+  user_id INT NOT NULL,
+  total DECIMAL(10,2) NOT NULL,
+  created_at DATETIME NOT NULL
+);
+CREATE TABLE IF NOT EXISTS order_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  order_id VARCHAR(36) NOT NULL,
+  product_id INT NOT NULL,
+  quantity INT NOT NULL,
+  subtotal DECIMAL(10,2) NOT NULL,
+  CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+);
+FLUSH PRIVILEGES;
+EXIT;
+# ---
+
+# Insertar tablas pendientes 3/3 ---
+kubectl exec -it products-db-0 -n webapp -c mysql -- mysql -uroot -papp-password
+Then paste:
+CREATE USER IF NOT EXISTS 'app-products'@'%' IDENTIFIED BY 'app-password';
+GRANT ALL PRIVILEGES ON `products-db`.* TO 'app-products'@'%';
+FLUSH PRIVILEGES;
+EXIT;
+# ---
+
+# Reiniciar deployments para que tomen las nuevas tablas (opcional)
+kubectl rollout restart deployment/users-deploy deployment/orders-deploy deployment/products-deploy -n webapp
+kubectl rollout status deployment/users-deploy -n webapp
+kubectl rollout status deployment/orders-deploy -n webapp
+kubectl rollout status deployment/products-deploy -n webapp
 
 # Verificar namespace creado
 kubectl get ns webapp

@@ -28,7 +28,7 @@ docker_network_driver: "bridge"
 microservices_config:
   users:
     name: "users-svc"
-    image: "bastianb001/users-svc:latest"
+    image: "bastianb001/users-svc:v1.1"
     instances:
       - container_name: "users-svc-1"
         port: 3001
@@ -48,7 +48,7 @@ microservices_config:
 
   products:
     name: "products-svc"
-    image: "bastianb001/products-svc:latest"
+    image: "bastianb001/products-svc:v1.1"
     instances:
       - container_name: "products-svc-1"
         port: 3002
@@ -68,7 +68,7 @@ microservices_config:
 
   orders:
     name: "orders-svc"
-    image: "bastianb001/orders-svc:latest"
+    image: "bastianb001/orders-svc:v1.1"
     instances:
       - container_name: "orders-svc-1"
         port: 3003

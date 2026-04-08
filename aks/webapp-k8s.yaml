@@ -107,7 +107,7 @@ spec:
             - name: MYSQL_DATABASE
               value: "products-db"
             - name: MYSQL_USER
-              value: "app_products"
+              value: "app-products"
             - name: MYSQL_PASSWORD
               value: "app-password"
           volumeMounts:
@@ -323,7 +323,7 @@ spec:
             - name: DATABASE_HOST
               value: "products-db"
             - name: MYSQL_USER
-              value: "app_products"
+              value: "app-products"
             - name: MYSQL_PASSWORD
               value: "app-password"
             - name: MYSQL_DB
