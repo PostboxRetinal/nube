@@ -3,5 +3,5 @@
 # =============================================================================
 
 ---
-docker_compose_dir: /opt/microservices
+docker_compose_dir: /home/vagrant/microservices
 docker_network_name: microservices-net

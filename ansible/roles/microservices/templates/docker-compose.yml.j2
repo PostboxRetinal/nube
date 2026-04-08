@@ -18,10 +18,12 @@ services:
       MYSQL_USER: app-users
       MYSQL_PASSWORD: app-password
     command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - {{ docker_compose_dir }}/init-users-db.sql:/docker-entrypoint-initdb.d/01-users.sql:ro
     networks:
       - {{ docker_network_name }}
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -proot || mysqladmin ping -h localhost -uroot"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --protocol=TCP -uroot -proot --silent"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -36,10 +38,12 @@ services:
       MYSQL_USER: app-products
       MYSQL_PASSWORD: app-password
     command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - {{ docker_compose_dir }}/init-products-db.sql:/docker-entrypoint-initdb.d/01-products.sql:ro
     networks:
       - {{ docker_network_name }}
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -proot || mysqladmin ping -h localhost -uroot"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --protocol=TCP -uroot -proot --silent"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -54,10 +58,12 @@ services:
       MYSQL_USER: app-orders
       MYSQL_PASSWORD: app-password
     command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - {{ docker_compose_dir }}/init-orders-db.sql:/docker-entrypoint-initdb.d/01-orders.sql:ro
     networks:
       - {{ docker_network_name }}
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -proot || mysqladmin ping -h localhost -uroot"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --protocol=TCP -uroot -proot --silent"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -72,8 +78,15 @@ services:
       - "{{ instance.port }}:{{ instance.container_port | default(instance.port) }}"
     environment:
       SERVICE_NAME: "{{ service.name }}"
-      SERVICE_PORT: "{{ instance.port }}"
+      SERVICE_PORT: "{{ instance.container_port | default(instance.port) }}"
       INSTANCE_ID: "{{ instance.container_name }}"
+{% if service_key == 'users' %}
+      PORT_USERS: "{{ instance.container_port | default(instance.port) }}"
+{% elif service_key == 'products' %}
+      PORT_PRODUCTS: "{{ instance.container_port | default(instance.port) }}"
+{% elif service_key == 'orders' %}
+      PORT_ORDERS: "{{ instance.container_port | default(instance.port) }}"
+{% endif %}
 {% if service.environment is defined %}
 {% for key, value in service.environment.items() %}
 {% if key not in ['SERVICE_NAME', 'SERVICE_PORT', 'INSTANCE_ID'] %}

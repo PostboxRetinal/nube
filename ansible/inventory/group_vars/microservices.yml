@@ -41,7 +41,7 @@ microservices_config:
     restart_policy: always
     networks: "{{ docker_network_name }}"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/api/users"]
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/users"]
       interval: "10s"
       timeout: "5s"
       retries: 3
@@ -61,7 +61,7 @@ microservices_config:
     restart_policy: always
     networks: "{{ docker_network_name }}"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/api/products"]
+      test: ["CMD", "curl", "-f", "http://localhost:3002/api/products"]
       interval: "10s"
       timeout: "5s"
       retries: 3
@@ -81,7 +81,7 @@ microservices_config:
     restart_policy: always
     networks: "{{ docker_network_name }}"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/api/orders"]
+      test: ["CMD", "curl", "-f", "http://localhost:3003/api/orders"]
       interval: "10s"
       timeout: "5s"
       retries: 3
