@@ -86,61 +86,26 @@ kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.
 cd aks/
 
 # Aplicar el manifest de la aplicación
-vim webapp-k8s.yaml
+# vim webapp-k8s.yaml
+
+# Si los Jobs de inicialización ya existen y terminaron, elimínalos para forzar
+# su ejecución de nuevo en un redeploy
+kubectl delete job users-db-init products-db-init orders-db-init -n webapp --ignore-not-found=true
+
 kubectl apply -f webapp-k8s.yaml
-kubectl delete -f microapp-k8s.yaml
 
-# Insertar tablas pendientes 1/3 ---
-kubectl exec -it users-db-0 -n webapp -c mysql -- mysql -uroot -papp-password
-Then paste:
-CREATE USER IF NOT EXISTS 'app-users'@'%' IDENTIFIED BY 'app-password';
-GRANT ALL PRIVILEGES ON `users-db`.* TO 'app-users'@'%';
-USE `users-db`;
-CREATE TABLE IF NOT EXISTS users (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
-  email VARCHAR(100) NOT NULL UNIQUE,
-  username VARCHAR(100) NOT NULL UNIQUE,
-  password VARCHAR(100) NOT NULL
-);
-FLUSH PRIVILEGES;
-EXIT;
-# ---
+# Esperar a que los StatefulSets de DB estén listos
+kubectl rollout status statefulset/users-db -n webapp
+kubectl rollout status statefulset/products-db -n webapp
+kubectl rollout status statefulset/orders-db -n webapp
 
-# Insertar tablas pendientes 2/3 ---
-kubectl exec -it orders-db-0 -n webapp -c mysql -- mysql -uroot -papp-password
-Then paste:
-CREATE USER IF NOT EXISTS 'app-orders'@'%' IDENTIFIED BY 'app-password';
-GRANT ALL PRIVILEGES ON `orders-db`.* TO 'app-orders'@'%';
-USE `orders-db`;
-CREATE TABLE IF NOT EXISTS orders (
-  id VARCHAR(36) PRIMARY KEY,
-  user_id INT NOT NULL,
-  total DECIMAL(10,2) NOT NULL,
-  created_at DATETIME NOT NULL
-);
-CREATE TABLE IF NOT EXISTS order_items (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  order_id VARCHAR(36) NOT NULL,
-  product_id INT NOT NULL,
-  quantity INT NOT NULL,
-  subtotal DECIMAL(10,2) NOT NULL,
-  CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
-);
-FLUSH PRIVILEGES;
-EXIT;
-# ---
+# Esperar Jobs idempotentes de inicialización de DB
+kubectl wait --for=condition=complete job/users-db-init -n webapp --timeout=180s
+kubectl wait --for=condition=complete job/products-db-init -n webapp --timeout=180s
+kubectl wait --for=condition=complete job/orders-db-init -n webapp --timeout=180s
+kubectl get jobs -n webapp
 
-# Insertar tablas pendientes 3/3 ---
-kubectl exec -it products-db-0 -n webapp -c mysql -- mysql -uroot -papp-password
-Then paste:
-CREATE USER IF NOT EXISTS 'app-products'@'%' IDENTIFIED BY 'app-password';
-GRANT ALL PRIVILEGES ON `products-db`.* TO 'app-products'@'%';
-FLUSH PRIVILEGES;
-EXIT;
-# ---
-
-# Reiniciar deployments para que tomen las nuevas tablas (opcional)
+# Reiniciar deployments para que tomen tablas/usuarios ya inicializados
 kubectl rollout restart deployment/users-deploy deployment/orders-deploy deployment/products-deploy -n webapp
 kubectl rollout status deployment/users-deploy -n webapp
 kubectl rollout status deployment/orders-deploy -n webapp
@@ -160,6 +125,11 @@ kubectl get pvc -n webapp
 
 # Ver estado de los eventos (útil si hay errores)
 kubectl get events -n webapp --sort-by='.lastTimestamp'
+
+# Ver logs de Jobs de inicialización (debug rápido)
+kubectl logs job/users-db-init -n webapp
+kubectl logs job/products-db-init -n webapp
+kubectl logs job/orders-db-init -n webapp
 ```
 
 ## 5. Requisito 11: Verificar pods a través del Service
@@ -177,7 +147,11 @@ users-db        ClusterIP   10.0.x.x       3306/TCP   Xm
 products-db     ClusterIP   10.0.x.x       3306/TCP   Xm
 orders-db       ClusterIP   10.0.x.x       3306/TCP   Xm
 users-svc       ClusterIP   10.0.x.x       3001/TCP   Xm
+users-svc-1     ClusterIP   10.0.x.x       3001/TCP   Xm
+users-svc-2     ClusterIP   10.0.x.x       3001/TCP   Xm
 products-svc    ClusterIP   10.0.x.x       3002/TCP   Xm
+products-svc-1  ClusterIP   10.0.x.x       3002/TCP   Xm
+products-svc-2  ClusterIP   10.0.x.x       3002/TCP   Xm
 orders-svc      ClusterIP   10.0.x.x       3003/TCP   Xm
 ```
 
@@ -350,7 +324,7 @@ kubectl get all,pvc,ingress -n webapp -o wide
 
 ```bash
 # Eliminar todos los recursos de la aplicación
-kubectl delete -f microapp-k8s.yaml
+kubectl delete -f webapp-k8s.yaml
 
 # Eliminar el ingress controller
 kubectl delete -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.9.4/deploy/static/provider/cloud/deploy.yaml
