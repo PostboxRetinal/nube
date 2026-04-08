@@ -54,48 +54,99 @@
   pause:
     seconds: 30
 
-- name: Ensure app_users exists in users_db
+- name: Wait for users-db to be ready
   shell: |
-    docker exec users_db sh -c "mysql -uroot -proot -e \"CREATE USER IF NOT EXISTS 'app_users'@'localhost' IDENTIFIED BY 'app_password'; CREATE USER IF NOT EXISTS 'app_users'@'%' IDENTIFIED BY 'app_password'; GRANT ALL PRIVILEGES ON users_db.* TO 'app_users'@'localhost'; GRANT ALL PRIVILEGES ON users_db.* TO 'app_users'@'%'; FLUSH PRIVILEGES;\""
+    for i in {1..30}; do
+      docker exec users-db sh -c "mysqladmin ping -h localhost -uroot -proot" 2>/dev/null && exit 0
+      echo "Waiting for users-db to be ready... attempt $i"
+      sleep 5
+    done
+    exit 1
+  register: usersdb_check
+  retries: 3
+  delay: 5
+  until: usersdb_check.rc == 0
+  changed_when: false
+
+- name: Wait for products-db to be ready
+  shell: |
+    for i in {1..30}; do
+      docker exec products-db sh -c "mysqladmin ping -h localhost -uroot -proot" 2>/dev/null && exit 0
+      echo "Waiting for products-db to be ready... attempt $i"
+      sleep 5
+    done
+    exit 1
+  register: productsdb_check
+  retries: 3
+  delay: 5
+  until: productsdb_check.rc == 0
+  changed_when: false
+
+- name: Wait for orders-db to be ready
+  shell: |
+    for i in {1..30}; do
+      docker exec orders-db sh -c "mysqladmin ping -h localhost -uroot -proot" 2>/dev/null && exit 0
+      echo "Waiting for orders-db to be ready... attempt $i"
+      sleep 5
+    done
+    exit 1
+  register: ordersdb_check
+  retries: 3
+  delay: 5
+  until: ordersdb_check.rc == 0
+  changed_when: false
+
+- name: Ensure app-users exists in users-db
+  shell: |
+    docker exec users-db sh -c "mysql -uroot -proot -e \"SELECT 1\" 2>/dev/null && mysql -uroot -proot -e \"CREATE USER IF NOT EXISTS 'app-users'@'localhost' IDENTIFIED BY 'app-password'; CREATE USER IF NOT EXISTS 'app-users'@'%' IDENTIFIED BY 'app-password'; GRANT ALL PRIVILEGES ON users-db.* TO 'app-users'@'localhost'; GRANT ALL PRIVILEGES ON users-db.* TO 'app-users'@'%'; FLUSH PRIVILEGES;\""
   args:
     executable: /bin/bash
-  register: users_db_user_result
-  changed_when: "'Granting' in users_db_user_result.stdout"
+  register: usersdb_user_result
+  changed_when: "'Granting' in usersdb_user_result.stdout"
   failed_when: false
+  retries: 3
+  delay: 10
+  until: usersdb_user_result.rc == 0
 
-- name: Initialize users schema in users_db
+- name: Initialize users schema in users-db
   shell: |
-    docker exec users_db sh -c "mysql -uapp_users -papp_password users_db -e \"CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL, email VARCHAR(100) NOT NULL UNIQUE, username VARCHAR(100) NOT NULL UNIQUE, password VARCHAR(100) NOT NULL);\""
+    docker exec users-db sh -c "mysql -uapp-users -papp-password users-db -e \"CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL, email VARCHAR(100) NOT NULL UNIQUE, username VARCHAR(100) NOT NULL UNIQUE, password VARCHAR(100) NOT NULL);\""
   args:
     executable: /bin/bash
 
-- name: Ensure app_products exists in products_db
+- name: Ensure app-products exists in products-db
   shell: |
-    docker exec products_db sh -c "mysql -uroot -proot -e \"CREATE USER IF NOT EXISTS 'app_products'@'localhost' IDENTIFIED BY 'app_password'; CREATE USER IF NOT EXISTS 'app_products'@'%' IDENTIFIED BY 'app_password'; GRANT ALL PRIVILEGES ON products_db.* TO 'app_products'@'localhost'; GRANT ALL PRIVILEGES ON products_db.* TO 'app_products'@'%'; FLUSH PRIVILEGES;\""
+    docker exec products-db sh -c "mysql -uroot -proot -e \"SELECT 1\" 2>/dev/null && mysql -uroot -proot -e \"CREATE USER IF NOT EXISTS 'app-products'@'localhost' IDENTIFIED BY 'app-password'; CREATE USER IF NOT EXISTS 'app-products'@'%' IDENTIFIED BY 'app-password'; GRANT ALL PRIVILEGES ON products-db.* TO 'app-products'@'localhost'; GRANT ALL PRIVILEGES ON products-db.* TO 'app-products'@'%'; FLUSH PRIVILEGES;\""
   args:
     executable: /bin/bash
-  register: products_db_user_result
-  changed_when: "'Granting' in products_db_user_result.stdout"
+  register: productsdb_user_result
+  changed_when: "'Granting' in productsdb_user_result.stdout"
   failed_when: false
+  retries: 3
+  delay: 10
+  until: productsdb_user_result.rc == 0
 
-- name: Initialize products schema in products_db
+- name: Initialize products schema in products-db
   shell: |
-    docker exec products_db sh -c "mysql -uapp_products -papp_password products_db -e \"CREATE TABLE IF NOT EXISTS products (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, description TEXT NULL, price DECIMAL(10,2) NOT NULL, stock INT NOT NULL);\""
+    docker exec products-db sh -c "mysql -uapp-products -papp-password products-db -e \"CREATE TABLE IF NOT EXISTS products (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, description TEXT NULL, price DECIMAL(10,2) NOT NULL, stock INT NOT NULL);\""
   args:
     executable: /bin/bash
 
-- name: Ensure app_orders exists in orders_db
+- name: Ensure app-orders exists in orders-db
   shell: |
-    docker exec orders_db sh -c "mysql -uroot -proot -e \"CREATE USER IF NOT EXISTS 'app_orders'@'localhost' IDENTIFIED BY 'app_password'; CREATE USER IF NOT EXISTS 'app_orders'@'%' IDENTIFIED BY 'app_password'; GRANT ALL PRIVILEGES ON orders_db.* TO 'app_orders'@'localhost'; GRANT ALL PRIVILEGES ON orders_db.* TO 'app_orders'@'%'; FLUSH PRIVILEGES;\""
+    docker exec orders-db sh -c "mysql -uroot -proot -e \"SELECT 1\" 2>/dev/null && mysql -uroot -proot -e \"CREATE USER IF NOT EXISTS 'app-orders'@'localhost' IDENTIFIED BY 'app-password'; CREATE USER IF NOT EXISTS 'app-orders'@'%' IDENTIFIED BY 'app-password'; GRANT ALL PRIVILEGES ON orders-db.* TO 'app-orders'@'localhost'; GRANT ALL PRIVILEGES ON orders-db.* TO 'app-orders'@'%'; FLUSH PRIVILEGES;\""
   args:
     executable: /bin/bash
-  register: orders_db_user_result
-  changed_when: "'Granting' in orders_db_user_result.stdout"
+  register: ordersdb_user_result
+  changed_when: "'Granting' in ordersdb_user_result.stdout"
   failed_when: false
+  retries: 3
+  delay: 10
+  until: ordersdb_user_result.rc == 0
 
-- name: Initialize orders schema in orders_db
+- name: Initialize orders schema in orders-db
   shell: |
-    docker exec orders_db sh -c "mysql -uapp_orders -papp_password orders_db -e \"CREATE TABLE IF NOT EXISTS orders (id VARCHAR(36) PRIMARY KEY, user_id INT NOT NULL, total DECIMAL(10,2) NOT NULL, created_at DATETIME NOT NULL); CREATE TABLE IF NOT EXISTS order_items (id INT AUTO_INCREMENT PRIMARY KEY, order_id VARCHAR(36) NOT NULL, product_id INT NOT NULL, quantity INT NOT NULL, subtotal DECIMAL(10,2) NOT NULL, CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE);\""
+    docker exec orders-db sh -c "mysql -uapp-orders -papp-password orders-db -e \"CREATE TABLE IF NOT EXISTS orders (id VARCHAR(36) PRIMARY KEY, user_id INT NOT NULL, total DECIMAL(10,2) NOT NULL, created_at DATETIME NOT NULL); CREATE TABLE IF NOT EXISTS order_items (id INT AUTO_INCREMENT PRIMARY KEY, order_id VARCHAR(36) NOT NULL, product_id INT NOT NULL, quantity INT NOT NULL, subtotal DECIMAL(10,2) NOT NULL, CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE);\""
   args:
     executable: /bin/bash
 
