@@ -22,7 +22,8 @@ haproxy_stats_refresh: "10s"
 haproxy_stats_realm: "HAProxy Statistics"
 haproxy_stats_allowed_sources:
   - "127.0.0.1/32"
-  - "{{ control_node_ip }}/32"
+  - "192.168.124.0/24"
+  - "192.168.58.0/24"
 
 # Global HAProxy Settings
 haproxy_global:

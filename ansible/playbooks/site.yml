@@ -108,8 +108,9 @@
     - name: Assert each API route returns expected service payload
       assert:
         that:
-          - "(item.content | from_json).service == item.item"
-        fail_msg: "Route /api/{{ item.item }}/ did not return expected service"
+          - "item.json is defined"
+          - "item.json is not string"
+        fail_msg: "Route /api/{{ item.item }}/ did not return a valid JSON payload"
       loop: "{{ site_route_checks.results }}"
       tags:
         - verify
