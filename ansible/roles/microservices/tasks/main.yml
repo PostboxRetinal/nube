@@ -47,9 +47,9 @@
   pause:
     seconds: 10
 
-- name: Ensure app_user exists in users_db
+- name: Ensure app_users exists in users_db
   shell: |
-    docker exec users_db sh -c "mysql -uroot -proot -e \"SELECT 1 FROM mysql.user WHERE User='app_user' AND Host='localhost'\" | grep -q 1 || mysql -uroot -proot -e \"CREATE USER 'app_user'@'localhost' IDENTIFIED BY 'app_password'; GRANT ALL PRIVILEGES ON users_db.* TO 'app_user'@'localhost'; FLUSH PRIVILEGES;\""
+    docker exec users_db sh -c "mysql -uroot -proot -e \"SELECT 1 FROM mysql.user WHERE User='app_users' AND Host='localhost'\" | grep -q 1 || mysql -uroot -proot -e \"CREATE USER 'app_users'@'localhost' IDENTIFIED BY 'app_password'; GRANT ALL PRIVILEGES ON users_db.* TO 'app_users'@'localhost'; FLUSH PRIVILEGES;\""
   args:
     executable: /bin/bash
   register: users_db_user_result
@@ -58,13 +58,13 @@
 
 - name: Initialize users schema in users_db
   shell: |
-    docker exec users_db sh -c "mysql -uapp_user -papp_password users_db -e \"CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL, email VARCHAR(100) NOT NULL UNIQUE, username VARCHAR(100) NOT NULL UNIQUE, password VARCHAR(100) NOT NULL);\""
+    docker exec users_db sh -c "mysql -uapp_users -papp_password users_db -e \"CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL, email VARCHAR(100) NOT NULL UNIQUE, username VARCHAR(100) NOT NULL UNIQUE, password VARCHAR(100) NOT NULL);\""
   args:
     executable: /bin/bash
 
-- name: Ensure app_user exists in products_db
+- name: Ensure app_products exists in products_db
   shell: |
-    docker exec products_db sh -c "mysql -uroot -proot -e \"SELECT 1 FROM mysql.user WHERE User='app_user' AND Host='localhost'\" | grep -q 1 || mysql -uroot -proot -e \"CREATE USER 'app_user'@'localhost' IDENTIFIED BY 'app_password'; GRANT ALL PRIVILEGES ON products_db.* TO 'app_user'@'localhost'; FLUSH PRIVILEGES;\""
+    docker exec products_db sh -c "mysql -uroot -proot -e \"SELECT 1 FROM mysql.user WHERE User='app_products' AND Host='localhost'\" | grep -q 1 || mysql -uroot -proot -e \"CREATE USER 'app_products'@'localhost' IDENTIFIED BY 'app_password'; GRANT ALL PRIVILEGES ON products_db.* TO 'app_products'@'localhost'; FLUSH PRIVILEGES;\""
   args:
     executable: /bin/bash
   register: products_db_user_result
@@ -73,13 +73,13 @@
 
 - name: Initialize products schema in products_db
   shell: |
-    docker exec products_db sh -c "mysql -uapp_user -papp_password products_db -e \"CREATE TABLE IF NOT EXISTS products (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, description TEXT NULL, price DECIMAL(10,2) NOT NULL, stock INT NOT NULL);\""
+    docker exec products_db sh -c "mysql -uapp_products -papp_password products_db -e \"CREATE TABLE IF NOT EXISTS products (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, description TEXT NULL, price DECIMAL(10,2) NOT NULL, stock INT NOT NULL);\""
   args:
     executable: /bin/bash
 
-- name: Ensure app_user exists in orders_db
+- name: Ensure app_orders exists in orders_db
   shell: |
-    docker exec orders_db sh -c "mysql -uroot -proot -e \"SELECT 1 FROM mysql.user WHERE User='app_user' AND Host='localhost'\" | grep -q 1 || mysql -uroot -proot -e \"CREATE USER 'app_user'@'localhost' IDENTIFIED BY 'app_password'; GRANT ALL PRIVILEGES ON orders_db.* TO 'app_user'@'localhost'; FLUSH PRIVILEGES;\""
+    docker exec orders_db sh -c "mysql -uroot -proot -e \"SELECT 1 FROM mysql.user WHERE User='app_orders' AND Host='localhost'\" | grep -q 1 || mysql -uroot -proot -e \"CREATE USER 'app_orders'@'localhost' IDENTIFIED BY 'app_password'; GRANT ALL PRIVILEGES ON orders_db.* TO 'app_orders'@'localhost'; FLUSH PRIVILEGES;\""
   args:
     executable: /bin/bash
   register: orders_db_user_result
@@ -88,7 +88,7 @@
 
 - name: Initialize orders schema in orders_db
   shell: |
-    docker exec orders_db sh -c "mysql -uapp_user -papp_password orders_db -e \"CREATE TABLE IF NOT EXISTS orders (id VARCHAR(36) PRIMARY KEY, user_id INT NOT NULL, total DECIMAL(10,2) NOT NULL, created_at DATETIME NOT NULL); CREATE TABLE IF NOT EXISTS order_items (id INT AUTO_INCREMENT PRIMARY KEY, order_id VARCHAR(36) NOT NULL, product_id INT NOT NULL, quantity INT NOT NULL, subtotal DECIMAL(10,2) NOT NULL, CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE);\""
+    docker exec orders_db sh -c "mysql -uapp_orders -papp_password orders_db -e \"CREATE TABLE IF NOT EXISTS orders (id VARCHAR(36) PRIMARY KEY, user_id INT NOT NULL, total DECIMAL(10,2) NOT NULL, created_at DATETIME NOT NULL); CREATE TABLE IF NOT EXISTS order_items (id INT AUTO_INCREMENT PRIMARY KEY, order_id VARCHAR(36) NOT NULL, product_id INT NOT NULL, quantity INT NOT NULL, subtotal DECIMAL(10,2) NOT NULL, CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE);\""
   args:
     executable: /bin/bash
 

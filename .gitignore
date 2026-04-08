@@ -19,3 +19,5 @@ terraform/virtualbox/jammy-server-cloudimg-amd64.ova
 terraform/virtualbox/terraform.*
 terraform/virtualbox/2026*
 terraform/virtualbox/$*
+
+.webApp
