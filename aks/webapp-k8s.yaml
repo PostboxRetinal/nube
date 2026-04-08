@@ -1,0 +1,462 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: webapp
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: users_db
+  namespace: webapp
+spec:
+  serviceName: users_db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: users_db
+  template:
+    metadata:
+      labels:
+        app: users_db
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+              name: mysql
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "app_password"
+            - name: MYSQL_DATABASE
+              value: "users_db"
+            - name: MYSQL_USER
+              value: "app_users"
+            - name: MYSQL_PASSWORD
+              value: "app_password"
+          volumeMounts:
+            - name: users_db-storage
+              mountPath: /var/lib/mysql
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            tcpSocket:
+              port: 3306
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 3306
+            initialDelaySeconds: 15
+            periodSeconds: 5
+  volumeClaimTemplates:
+    - metadata:
+        name: users_db-storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+        storageClassName: default
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: users_db
+  namespace: webapp
+spec:
+  type: ClusterIP
+  selector:
+    app: users_db
+  ports:
+    - port: 3306
+      targetPort: 3306
+      name: mysql
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: products_db
+  namespace: webapp
+spec:
+  serviceName: products_db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: products_db
+  template:
+    metadata:
+      labels:
+        app: products_db
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+              name: mysql
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "app_password"
+            - name: MYSQL_DATABASE
+              value: "products_db"
+            - name: MYSQL_USER
+              value: "app_products"
+            - name: MYSQL_PASSWORD
+              value: "app_password"
+          volumeMounts:
+            - name: products_db-storage
+              mountPath: /var/lib/mysql
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            tcpSocket:
+              port: 3306
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 3306
+            initialDelaySeconds: 15
+            periodSeconds: 5
+  volumeClaimTemplates:
+    - metadata:
+        name: products_db-storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+        storageClassName: default
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: products_db
+  namespace: webapp
+spec:
+  type: ClusterIP
+  selector:
+    app: products_db
+  ports:
+    - port: 3306
+      targetPort: 3306
+      name: mysql
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: orders_db
+  namespace: webapp
+spec:
+  serviceName: orders_db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orders_db
+  template:
+    metadata:
+      labels:
+        app: orders_db
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+              name: mysql
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "app_password"
+            - name: MYSQL_DATABASE
+              value: "orders_db"
+            - name: MYSQL_USER
+              value: "app_orders"
+            - name: MYSQL_PASSWORD
+              value: "app_password"
+          volumeMounts:
+            - name: orders_db-storage
+              mountPath: /var/lib/mysql
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            tcpSocket:
+              port: 3306
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 3306
+            initialDelaySeconds: 15
+            periodSeconds: 5
+  volumeClaimTemplates:
+    - metadata:
+        name: orders_db-storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+        storageClassName: default
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orders_db
+  namespace: webapp
+spec:
+  type: ClusterIP
+  selector:
+    app: orders_db
+  ports:
+    - port: 3306
+      targetPort: 3306
+      name: mysql
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: users-deploy
+  namespace: webapp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: users-service
+  template:
+    metadata:
+      labels:
+        app: users-service
+    spec:
+      containers:
+        - name: users-service
+          image: bastianb001/users-svc:latest
+          ports:
+            - containerPort: 3001
+          env:
+            - name: MYSQL_HOST
+              value: "users_db"
+            - name: DB_HOST
+              value: "users_db"
+            - name: DATABASE_HOST
+              value: "users_db"
+            - name: MYSQL_USER
+              value: "app_users"
+            - name: MYSQL_PASSWORD
+              value: "app_password"
+            - name: MYSQL_DB
+              value: "users_db"
+            - name: MYSQL_DATABASE
+              value: "users_db"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            tcpSocket:
+              port: 3001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: users-svc
+  namespace: webapp
+spec:
+  type: ClusterIP
+  selector:
+    app: users-service
+  ports:
+    - port: 3001
+      targetPort: 3001
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: products-deploy
+  namespace: webapp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: products-service
+  template:
+    metadata:
+      labels:
+        app: products-service
+    spec:
+      containers:
+        - name: products-service
+          image: bastianb001/products-svc:latest
+          ports:
+            - containerPort: 3002
+          env:
+            - name: MYSQL_HOST
+              value: "products_db"
+            - name: DB_HOST
+              value: "products_db"
+            - name: DATABASE_HOST
+              value: "products_db"
+            - name: MYSQL_USER
+              value: "app_products"
+            - name: MYSQL_PASSWORD
+              value: "app_password"
+            - name: MYSQL_DB
+              value: "products_db"
+            - name: MYSQL_DATABASE
+              value: "products_db"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            tcpSocket:
+              port: 3002
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 3002
+            initialDelaySeconds: 10
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: products-svc
+  namespace: webapp
+spec:
+  type: ClusterIP
+  selector:
+    app: products-service
+  ports:
+    - port: 3002
+      targetPort: 3002
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders-deploy
+  namespace: webapp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: orders-service
+  template:
+    metadata:
+      labels:
+        app: orders-service
+    spec:
+      containers:
+        - name: orders-service
+          image: bastianb001/orders-svc:latest
+          ports:
+            - containerPort: 3003
+          env:
+            - name: MYSQL_HOST
+              value: "orders_db"
+            - name: DB_HOST
+              value: "orders_db"
+            - name: DATABASE_HOST
+              value: "orders_db"
+            - name: MYSQL_USER
+              value: "app_orders"
+            - name: MYSQL_PASSWORD
+              value: "app_password"
+            - name: MYSQL_DB
+              value: "orders_db"
+            - name: MYSQL_DATABASE
+              value: "orders_db"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            tcpSocket:
+              port: 3003
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 3003
+            initialDelaySeconds: 10
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orders-svc
+  namespace: webapp
+spec:
+  type: ClusterIP
+  selector:
+    app: orders-service
+  ports:
+    - port: 3003
+      targetPort: 3003
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-webapp
+  namespace: webapp
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /api/users
+            pathType: Prefix
+            backend:
+              service:
+                name: users-svc
+                port:
+                  number: 3001
+          - path: /api/products
+            pathType: Prefix
+            backend:
+              service:
+                name: products-svc
+                port:
+                  number: 3002
+          - path: /api/orders
+            pathType: Prefix
+            backend:
+              service:
+                name: orders-svc
+                port:
+                  number: 3003
