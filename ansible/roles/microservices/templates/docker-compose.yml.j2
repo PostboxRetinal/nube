@@ -15,6 +15,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: users_db
+      MYSQL_USER: app_user
+      MYSQL_PASSWORD: app_password
     command: --default-authentication-plugin=mysql_native_password
     networks:
       - {{ docker_network_name }}
@@ -31,6 +33,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: products_db
+      MYSQL_USER: app_user
+      MYSQL_PASSWORD: app_password
     command: --default-authentication-plugin=mysql_native_password
     networks:
       - {{ docker_network_name }}
@@ -47,7 +51,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: orders_db
-      MYSQL_USER: app_orders
+      MYSQL_USER: app_user
       MYSQL_PASSWORD: app_password
     command: --default-authentication-plugin=mysql_native_password
     networks:
