@@ -24,9 +24,10 @@ services:
       - {{ docker_network_name }}
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --protocol=TCP -uroot -proot --silent"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+      interval: {{ mysql_health_interval }}
+      timeout: {{ mysql_health_timeout }}
+      retries: {{ mysql_health_retries }}
+      start_period: {{ mysql_health_start_period }}
 
   products-db:
     image: mysql:8.0
@@ -44,9 +45,10 @@ services:
       - {{ docker_network_name }}
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --protocol=TCP -uroot -proot --silent"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+      interval: {{ mysql_health_interval }}
+      timeout: {{ mysql_health_timeout }}
+      retries: {{ mysql_health_retries }}
+      start_period: {{ mysql_health_start_period }}
 
   orders-db:
     image: mysql:8.0
@@ -64,9 +66,10 @@ services:
       - {{ docker_network_name }}
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --protocol=TCP -uroot -proot --silent"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+      interval: {{ mysql_health_interval }}
+      timeout: {{ mysql_health_timeout }}
+      retries: {{ mysql_health_retries }}
+      start_period: {{ mysql_health_start_period }}
 
 {% for service_key, service in microservices_config.items() %}
 {% for instance in service.instances %}

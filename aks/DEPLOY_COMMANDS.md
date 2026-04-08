@@ -38,13 +38,7 @@ az provider show --namespace Microsoft.ContainerService --query "registrationSta
 az group create --name rg-nube2 --location mexicocentral
 
 # Crear cluster AKS
-az aks create \
-  --resource-group rg-nube2 \
-  --name aks-nube2 \
-  --node-count 2 \
-  --location mexicocentral \
-  --node-vm-size Standard_B2s \
-  --generate-ssh-keys
+az aks create --resource-group rg-nube2 --name aks-nube2 --node-count 2 --location mexicocentral --node-vm-size Standard_B2s --generate-ssh-keys
 
 # Obtener credenciales de kubectl
 az aks get-credentials --resource-group rg-nube2 --name aks-nube2 --overwrite-existing
@@ -67,10 +61,7 @@ kubectl get pods -n ingress-nginx
 kubectl get svc -n ingress-nginx
 
 # Esperar a que esté listo (timeout 5 minutos)
-kubectl wait --namespace ingress-nginx \
-  --for=condition=ready pod \
-  --selector=app.kubernetes.io/component=controller \
-  --timeout=300s
+kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=300s
 ```
 
 ## 4. Deploy de la Aplicación

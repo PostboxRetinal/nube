@@ -48,26 +48,32 @@
   args:
     executable: /bin/bash
 
-- name: Start microservices with Docker Compose
+- name: Start database containers with Docker Compose
   community.docker.docker_compose_v2:
     project_src: "{{ docker_compose_dir }}"
     state: present
     remove_orphans: true
-  register: compose_output
+    services:
+      - users-db
+      - products-db
+      - orders-db
+  register: compose_db_output
 
-- name: Display Docker Compose output
+- name: Display database compose output
   debug:
-    var: compose_output
-  when: compose_output is defined
+    var: compose_db_output
+  when: compose_db_output is defined
 
 - name: Wait for users-db to be ready
   shell: |
-    for i in {1..30}; do
+    for i in $(seq 1 30); do
       docker exec users-db sh -c "mysqladmin ping -h 127.0.0.1 --protocol=TCP -uroot -proot --silent" 2>/dev/null && exit 0
       echo "Waiting for users-db to be ready... attempt $i"
       sleep 5
     done
     exit 1
+  args:
+    executable: /bin/bash
   register: usersdb_check
   retries: 3
   delay: 5
@@ -76,12 +82,14 @@
 
 - name: Wait for products-db to be ready
   shell: |
-    for i in {1..30}; do
+    for i in $(seq 1 30); do
       docker exec products-db sh -c "mysqladmin ping -h 127.0.0.1 --protocol=TCP -uroot -proot --silent" 2>/dev/null && exit 0
       echo "Waiting for products-db to be ready... attempt $i"
       sleep 5
     done
     exit 1
+  args:
+    executable: /bin/bash
   register: productsdb_check
   retries: 3
   delay: 5
@@ -90,12 +98,14 @@
 
 - name: Wait for orders-db to be ready
   shell: |
-    for i in {1..30}; do
+    for i in $(seq 1 30); do
       docker exec orders-db sh -c "mysqladmin ping -h 127.0.0.1 --protocol=TCP -uroot -proot --silent" 2>/dev/null && exit 0
       echo "Waiting for orders-db to be ready... attempt $i"
       sleep 5
     done
     exit 1
+  args:
+    executable: /bin/bash
   register: ordersdb_check
   retries: 3
   delay: 5
@@ -141,11 +151,18 @@
   register: ordersdb_tables
   failed_when: false
 
-- name: Restart microservices to ensure DB connection
-  shell: |
-    docker compose -f {{ docker_compose_dir }}/docker-compose.yml restart users-svc-1 users-svc-2 products-svc-1 products-svc-2 orders-svc-1 orders-svc-2
-  args:
-    executable: /bin/bash
+- name: Start microservice app containers with Docker Compose
+  community.docker.docker_compose_v2:
+    project_src: "{{ docker_compose_dir }}"
+    state: present
+    remove_orphans: true
+    services: "{{ microservices_config | dict2items | map(attribute='value.instances') | flatten | map(attribute='container_name') | list }}"
+  register: compose_apps_output
+
+- name: Display app compose output
+  debug:
+    var: compose_apps_output
+  when: compose_apps_output is defined
 
 - name: Wait for microservices to be healthy
   wait_for:
