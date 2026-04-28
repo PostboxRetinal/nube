@@ -1,186 +1,187 @@
-# Parcial 2C · Infraestructura Multi-Hypervisor (KVM/Libvirt + VirtualBox)
+# Arquitectura multicloud Azure Apache + AWS EC2 API
 
-Implementación de infraestructura reproducible para una aplicación de microservicios con:
+Este repositorio contiene los archivos necesarios para configurar:
 
-- **Vagrant** para levantar el `control-node`
-- **Terraform** para aprovisionar `vm-haproxy` y `vm-microservices`
-- **Ansible** para configurar servicios
-- **Docker Compose** para desplegar microservicios
-- **HAProxy** como punto de entrada único con balanceo por ruta y round-robin
+- Un host Apache en una VM de Azure que sirve un frontend estático.
+- Una API REST en una instancia EC2 de AWS con Node.js y Express.
 
-Este branch incluye la etapa de **balanceo de carga con HAProxy** con validaciones de:
+## Estructura de carpetas
 
-- routing por prefijo (`/api/users`, `/api/products`, `/api/orders`)
-- estado de backends en stats
-- distribución round-robin
-- failover sin interrupción del servicio
+- `aws-api/`
+  - `package.json` - dependencias y script de inicio de Node.
+  - `index.js` - servidor Express con endpoints `GET /api/data` y `POST /api/data`.
+  - `README.md` - instrucciones de uso específicas de la API.
 
----
+- `azure-host/`
+  - `index.html` - frontend HTML que consume la API vía Apache.
+  - `000-default.conf` - configuración de proxy inverso para Apache que reenvía `/api` a AWS.
 
-## Arquitectura
+## AWS EC2: API REST en Node.js
 
-Cliente → `vm-haproxy:80` → backends en `vm-microservices`
+### Archivos
 
-- `/api/users/*` → `3001`, `3011`
-- `/api/products/*` → `3002`, `3012`
-- `/api/orders/*` → `3003`, `3013`
+- `aws-api/package.json`
+- `aws-api/index.js`
 
-Además:
+### Contenido principal
 
-- stats de HAProxy en `:8080/stats` (Basic Auth)
-- health checks activos (`GET /health`)
+La API incluye:
 
----
+- `GET /api/data` → devuelve JSON con mensajes de prueba.
+- `POST /api/data` → devuelve JSON con el cuerpo recibido.
 
-## Estructura del proyecto
+### Pasos para ejecutar en EC2
 
-- `vagrant/`
-	- `kvm-libvirt/Vagrantfile`
-	- `virtualbox/Vagrantfile`
-	- `scripts/` (bootstrap y helper scripts)
-- `terraform/`
-	- `kvm-libvirt/`
-	- `virtualbox/`
-- `ansible/`
-	- `playbooks/`
-	- `inventory/`
-	- `roles/`
-- `ssh-keys/`
+1. Copiar los archivos de `aws-api` a la instancia EC2.
+2. Instalar Node.js y npm:
+   - Ubuntu:
+     ```bash
+     sudo apt update
+     sudo apt install -y nodejs npm
+     ```
+3. En el directorio del proyecto:
+   ```bash
+   npm install
+   npm start
+   ```
+4. Probar localmente en EC2:
+   ```bash
+   curl http://localhost:3000/api/data
+   curl -X POST http://localhost:3000/api/data -H "Content-Type: application/json" -d '{"test":"ok"}'
+   ```
 
----
+### Nota de puerto
 
-## Requisitos
+- El servicio corre en `3000` por defecto.
+- Si deseas acceder directamente desde Azure o desde fuera, abre el puerto `3000` en el Security Group de la EC2.
 
-### Entorno Linux (openSUSE + KVM/Libvirt)
+## Azure VM: Host Apache y frontend
 
-- Vagrant
-- plugin `vagrant-libvirt`
-- KVM/libvirt activos en host
+### Archivos
 
-### Entorno Windows (VirtualBox)
+- `azure-host/index.html`
+- `azure-host/000-default.conf`
 
-- Vagrant
-- VirtualBox
+### Contenido principal
 
----
+- `index.html` muestra un frontend moderno que llama a `/api/data`.
+- `000-default.conf` configura Apache para enviar `/api` hacia el endpoint de la API en AWS.
 
-## Flujo de despliegue
+### Configuración de Apache
 
-### 1) Levantar control-node
+En Ubuntu/Debian, coloca el HTML en `/var/www/html/index.html`.
+Luego, añade la configuración de proxy en el archivo del sitio activo, por ejemplo:
 
-#### KVM/Libvirt
+```apache
+<VirtualHost *:80>
+    ServerAdmin webmaster@localhost
+    DocumentRoot /var/www/html
 
-Desde `vagrant/kvm-libvirt`:
+    ProxyPreserveHost On
+    ProxyPass /api http://<AWS_PUBLIC_IP>:3000/api
+    ProxyPassReverse /api http://<AWS_PUBLIC_IP>:3000/api
 
-- `vagrant up`
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
+```
 
-#### VirtualBox
+Habilita los módulos de proxy y reinicia Apache:
 
-Desde `vagrant/virtualbox`:
+```bash
+sudo a2enmod proxy proxy_http
+sudo systemctl restart apache2
+```
 
-- `vagrant up`
+### Prueba del frontend
 
-### 2) Entrar al control-node
+- Abre en el navegador: `http://<AZURE_PUBLIC_IP>/`
+- Haz clic en el botón `Llamar API AWS`.
+- Debería mostrarse la respuesta JSON del endpoint.
 
-- `vagrant ssh`
+## Pruebas de conectividad y consumo
 
-### 3) Desplegar infraestructura completa
+### Verificar HTTP desde EC2 hacia Azure
 
-Dentro de `control-node`:
+En la EC2, ejecuta:
 
-- `~/deploy-infrastructure.sh`
+```bash
+curl -I http://<AZURE_PUBLIC_IP>/
+curl http://<AZURE_PUBLIC_IP>/
+```
 
-Esto ejecuta Terraform + Ansible y deja listos:
+Si obtienes `HTTP/1.1 200 OK`, el host Apache en Azure está accesible.
 
-- `vm-haproxy`
-- `vm-microservices`
-- inventario generado en `/home/vagrant/ansible/inventory/hosts.yml`
+### Verificar la API desde EC2
 
----
+Si Apache está configurado como proxy inverso, prueba:
 
-## Scripts helper (control-node)
+```bash
+curl http://<AZURE_PUBLIC_IP>/api/data
+```
 
-Generados por `create-helper-scripts.sh`:
+Para POST:
 
-- `~/deploy-infrastructure.sh`
-- `~/destroy-infrastructure.sh`
-- `~/check-status.sh`
-- `~/test-endpoints.sh`
-- `~/test-roundrobin.sh`
-- `~/test-failover.sh`
+```bash
+curl -X POST http://<AZURE_PUBLIC_IP>/api/data \
+  -H "Content-Type: application/json" \
+  -d '{"test":"ok"}'
+```
 
----
+### Verificación del servicio Node.js en EC2
 
-## Validación de HAProxy (entregables)
+```bash
+curl http://localhost:3000/api/data
+curl http://<EC2_PUBLIC_IP>:3000/api/data
+```
 
-### 1) Estado general + stats
+## Habilitar ICMP (ping)
 
-- `~/check-status.sh`
+El `ping` puede fallar aunque HTTP funcione, porque ICMP puede estar bloqueado en Azure.
 
-Esperado:
+### En Azure NSG
 
-- VMs `REACHABLE`
-- puerto `80` de HAProxy activo
-- stats en `8080` respondiendo
-- auth de stats `OK`
+1. Ve a la VM en el Portal Azure.
+2. En `Networking`, agrega una regla entrante.
+3. Configura:
+   - Protocol: `ICMP`
+   - Source: `Any` o tu IP
+   - Destination: `Any`
+   - Action: `Allow`
+   - Priority: `1000`
+   - Name: `Allow-ICMP`
 
-### 2) Routing por prefijo
+### En el Security Group de AWS
 
-- `~/test-endpoints.sh`
+1. En la consola de AWS, ve a `EC2` > `Security Groups`.
+2. Selecciona el Security Group que usa tu instancia EC2.
+3. En `Inbound rules`, agrega una regla:
+   - Type: `All ICMP` o `Custom ICMP`
+   - Protocol: `ICMP`
+   - Port range: `N/A`
+   - Source: `Any` o tu IP
+   - Description: `Allow ICMP`.
+4. Guarda la regla.
 
-Esperado:
+> Nota: El API funciona perfectamente aunque ICMP esté bloqueado.
 
-- `/api/users/` → `HTTP 200`
-- `/api/products/` → `HTTP 200`
-- `/api/orders/` → `HTTP 200`
+## Resumen de lo realizado
 
-### 3) Round-robin
+- Se creó una API REST en AWS EC2 con Node.js y Express.
+- Se creó un frontend HTML en Azure servido por Apache.
+- Se configuró un proxy inverso para que Apache reenvíe `/api` hacia AWS.
+- Se documentaron pruebas de conectividad HTTP desde EC2 hacia Azure.
+- Se incluyeron los pasos de habilitación de ICMP en Azure y EC2.
 
-- `~/test-roundrobin.sh`
+## Uso rápido
 
-Esperado:
+1. Arranca la API en EC2:
+   ```bash
+   npm install
+   npm start
+   ```
+2. Configura Apache en Azure con `000-default.conf` y reinicia.
+3. Abre `http://<AZURE_PUBLIC_IP>/` en un navegador.
+4. Prueba `curl` o el botón del frontend.
 
-- cada servicio distribuye requests entre **al menos 2 instancias**
-
-### 4) Failover
-
-- `SERVICE=users INSTANCE_DOWN=users-service-1 ~/test-failover.sh`
-
-Esperado:
-
-- instancia detenida pasa a `DOWN` en stats
-- requests siguen devolviendo `HTTP 200`
-- al recuperar, vuelve a `UP`
-
----
-
-## Endpoints de referencia
-
-Los IPs exactos dependen del proveedor y salen al final de `deploy-infrastructure.sh`.
-
-Ejemplo (libvirt):
-
-- HAProxy HTTP: `http://192.168.123.20:80`
-- HAProxy stats: `http://192.168.123.20:8080/stats`
-- Users: `http://192.168.123.20/api/users/`
-- Products: `http://192.168.123.20/api/products/`
-- Orders: `http://192.168.123.20/api/orders/`
-
-Acceso desde host físico (a través de control-node):
-
-- KVM/libvirt host -> `http://192.168.123.10/api/users/`
-- KVM/libvirt stats -> `http://192.168.123.10:8080/stats`
-- VirtualBox host -> `http://192.168.57.10/api/users/`
-- VirtualBox stats -> `http://192.168.57.10:8080/stats`
-
-Acceso recomendado y estable desde host (idéntico en ambos proveedores):
-
-- API vía port-forward: `http://127.0.0.1:18080/api/users/`
-- Stats vía port-forward: `http://127.0.0.1:18081/stats`
-
----
-
-## Notas operativas
-
-- Las IPs de backend en HAProxy se toman del inventario para evitar hardcode entre libvirt y VirtualBox.
-- En ambos proveedores, `control-node` ejecuta un proxy hacia `vm-haproxy` y Vagrant publica los puertos `18080` y `18081` en `127.0.0.1` del host.
+> Nota: Verificar el nombre exacto del 000-default.conf (No recuerdo el nombre exacto)
