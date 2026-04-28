@@ -3,25 +3,26 @@
 Este repositorio contiene los archivos necesarios para configurar:
 
 - Un host Apache en una VM de Azure que sirve un frontend estático.
-- Una API REST en una instancia EC2 de AWS con Node.js y Express.
+- Una API REST en una instancia EC2 de AWS con Elysia sobre Bun.
 
 ## Estructura de carpetas
 
 - `aws-api/`
-  - `package.json` - dependencias y script de inicio de Node.
-  - `index.js` - servidor Express con endpoints `GET /api/data` y `POST /api/data`.
+  - `package.json` - scripts de inicio con Bun y dependencia de Elysia.
+  - `index.ts` - servidor Elysia con endpoints `GET /api/data` y `POST /api/data`.
+  - `tsconfig.json` - configuracion TypeScript para Bun.
   - `README.md` - instrucciones de uso específicas de la API.
 
 - `azure-host/`
   - `index.html` - frontend HTML que consume la API vía Apache.
   - `000-default.conf` - configuración de proxy inverso para Apache que reenvía `/api` a AWS.
 
-## AWS EC2: API REST en Node.js
+## AWS EC2: API REST en Elysia sobre Bun
 
 ### Archivos
 
 - `aws-api/package.json`
-- `aws-api/index.js`
+- `aws-api/index.ts`
 
 ### Contenido principal
 
@@ -33,16 +34,14 @@ La API incluye:
 ### Pasos para ejecutar en EC2
 
 1. Copiar los archivos de `aws-api` a la instancia EC2.
-2. Instalar Node.js y npm:
-   - Ubuntu:
-     ```bash
-     sudo apt update
-     sudo apt install -y nodejs npm
-     ```
+2. Instalar Bun:
+   ```bash
+   curl -fsSL https://bun.com/install | bash
+   ```
 3. En el directorio del proyecto:
    ```bash
-   npm install
-   npm start
+   bun install
+   bun dev
    ```
 4. Probar localmente en EC2:
    ```bash
@@ -128,7 +127,7 @@ curl -X POST http://<AZURE_PUBLIC_IP>/api/data \
   -d '{"test":"ok"}'
 ```
 
-### Verificación del servicio Node.js en EC2
+### Verificación del servicio Bun en EC2
 
 ```bash
 curl http://localhost:3000/api/data
@@ -167,7 +166,7 @@ El `ping` puede fallar aunque HTTP funcione, porque ICMP puede estar bloqueado e
 
 ## Resumen de lo realizado
 
-- Se creó una API REST en AWS EC2 con Node.js y Express.
+- Se creó una API REST en AWS EC2 con Elysia sobre Bun.
 - Se creó un frontend HTML en Azure servido por Apache.
 - Se configuró un proxy inverso para que Apache reenvíe `/api` hacia AWS.
 - Se documentaron pruebas de conectividad HTTP desde EC2 hacia Azure.
@@ -177,8 +176,8 @@ El `ping` puede fallar aunque HTTP funcione, porque ICMP puede estar bloqueado e
 
 1. Arranca la API en EC2:
    ```bash
-   npm install
-   npm start
+   bun install
+   bun run start
    ```
 2. Configura Apache en Azure con `000-default.conf` y reinicia.
 3. Abre `http://<AZURE_PUBLIC_IP>/` en un navegador.

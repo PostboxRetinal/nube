@@ -2,11 +2,16 @@
   "name": "aws-api",
   "version": "1.0.0",
   "description": "API REST simple para AWS EC2",
-  "main": "index.js",
+  "type": "module",
+  "main": "index.ts",
   "scripts": {
-    "start": "node index.js"
+    "dev": "bun --watch index.ts",
+    "start": "bun index.ts"
   },
   "dependencies": {
-    "express": "^4.18.2"
+    "elysia": "^1.4.28"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
   }
 }

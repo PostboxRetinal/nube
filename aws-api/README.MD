@@ -1,17 +1,23 @@
-# API REST en AWS EC2
+# API REST en AWS EC2 con Elysia
 
 Este proyecto contiene la API REST que se ejecuta en la instancia EC2 de AWS.
 
 ## Archivos
 
-- `package.json`: dependencias de Node.js.
-- `index.js`: servidor Express con endpoints GET y POST.
+- `package.json`: scripts y dependencia de Elysia para ejecutar la API con Bun.
+- `index.ts`: servidor Elysia con endpoints GET y POST.
+- `tsconfig.json`: configuracion TypeScript para Bun.
 
 ## Instalación en EC2
 
 1. Navega al directorio del proyecto, por ejemplo `/home/ubuntu/api`.
-2. Ejecuta `npm install`.
-3. Inicia la API con `npm start`.
+2. Instala Bun si no está disponible: `curl -fsSL https://bun.com/install | bash`.
+3. Ejecuta `bun install`.
+4. Inicia la API con `bun run start` o `bun dev`.
+
+## Desarrollo
+
+- `bun dev`: inicia el servidor con recarga automatica.
 
 ## Probar localmente en EC2
 
