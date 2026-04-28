@@ -1,4 +1,5 @@
 import { Elysia } from 'elysia';
+import { cors } from '@elysiajs/cors';
 
 const PORT = Number.parseInt(process.env.PORT ?? '3000', 10);
 
@@ -7,6 +8,13 @@ if (Number.isNaN(PORT)) {
 }
 
 export const app = new Elysia()
+  .use(cors(
+    {
+      origin: '*',
+      methods: ['GET', 'POST', 'OPTIONS'],
+      allowedHeaders: ['Content-Type']
+    }
+  ))
   .onError(({ code, status }) => {
     if (code === 'NOT_FOUND') {
       return status(404, { message: 'No encontrado' });
