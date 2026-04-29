@@ -1,4 +1,4 @@
-import { Elysia } from 'elysia';
+import { Elysia, t } from 'elysia';
 import { cors } from '@elysiajs/cors';
 
 const PORT = Number.parseInt(process.env.PORT ?? '3000', 10);
@@ -11,7 +11,7 @@ export const app = new Elysia()
   .use(cors(
     {
       origin: '*',
-      methods: ['GET', 'POST', 'OPTIONS'],
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type']
     }
   ))
@@ -33,7 +33,26 @@ export const app = new Elysia()
     message: 'POST recibido en la API de AWS EC2',
     received: body,
     timestamp: new Date().toISOString()
-  }));
+  }))
+  .put('/api/data/:id', ({ body, params: { id } }) => ({
+    message: 'PUT recibido en la API de AWS EC2',
+    id,
+    updated: body,
+    timestamp: new Date().toISOString()
+  }), {
+    params: t.Object({
+      id: t.String({ minLength: 1 })
+    })
+  })
+  .delete('/api/data/:id', ({ params: { id } }) => ({
+    message: 'DELETE recibido en la API de AWS EC2',
+    id,
+    timestamp: new Date().toISOString()
+  }), {
+    params: t.Object({
+      id: t.String({ minLength: 1 })
+    })
+  });
 
 if (import.meta.main) {
   app.listen({
